@@ -293,11 +293,27 @@ $$;
 create or replace function public.open_question(p_game uuid, p_idx integer)
 returns void language plpgsql security definer set search_path = public as $$
 declare
+  v_game record;
   v_status text;
 begin
   if not public.is_game_host(p_game) then raise exception 'not-host'; end if;
   if p_idx < 0 or p_idx > 10 then raise exception 'invalid-index'; end if;
+  select * into v_game from public.games where id = p_game;
+  if not found then raise exception 'game-not-found'; end if;
   v_status := case when p_idx = 10 then 'final_wager' else 'question_open' end;
+  -- Garde-fou FSM serveur (miroir docs/02 §2 + game_fsm.dart) :
+  -- démarrage depuis lobby uniquement, suite strictement séquentielle
+  -- depuis reveal/leaderboard (pas de saut, pas de rejeu, pas de reset timer).
+  if p_idx = 0 then
+    if v_game.status <> 'lobby' then raise exception 'bad-transition'; end if;
+  else
+    if v_game.status not in ('reveal', 'leaderboard') then
+      raise exception 'bad-transition';
+    end if;
+    if p_idx <> v_game.current_question_idx + 1 then
+      raise exception 'invalid-index';
+    end if;
+  end if;
   update public.games
   set current_question_idx = p_idx, status = v_status,
       question_opened_at = now(), expires_at = now() + interval '24 hours'
@@ -656,3 +672,7 @@ revoke all on function public.override_answer(uuid, boolean) from public;
 grant execute on function public.override_answer(uuid, boolean) to authenticated;
 revoke all on function public.transfer_host(uuid, uuid) from public;
 grant execute on function public.transfer_host(uuid, uuid) to authenticated;
+
+-- Interne uniquement : jamais appelable par le client (SECURITY DEFINER + écriture
+-- scores). Invoquée uniquement par lock_question / override_answer en interne.
+revoke all on function public.recompute_player_stats(uuid) from public, anon, authenticated;
