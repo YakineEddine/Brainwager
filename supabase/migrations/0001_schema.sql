@@ -10,7 +10,7 @@ create extension if not exists "fuzzystrmatch";
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   display_name text,
-  locale text(2) not null default 'fr' check (locale in ('fr', 'en')),
+  locale text not null default 'fr' check (locale in ('fr', 'en')),
   created_at timestamptz not null default now()
 );
 
@@ -67,7 +67,7 @@ create table public.games (
   join_code text unique not null,
   host_id uuid references public.profiles (id) on delete set null,
   pack_id uuid references public.packs (id) on delete set null,
-  language text(2) not null default 'fr' check (language in ('fr', 'en')),
+  language text not null default 'fr' check (language in ('fr', 'en')),
   status text not null default 'lobby'
     check (status in ('lobby', 'question_open', 'question_locked', 'reveal',
                       'leaderboard', 'final_wager', 'final_reveal', 'finished')),

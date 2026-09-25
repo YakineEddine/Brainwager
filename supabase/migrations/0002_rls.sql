@@ -64,7 +64,7 @@ create policy questions_delete_owner on public.questions
 create policy games_select_member on public.games
   for select using (public.is_game_member(id));
 create policy games_insert_auth on public.games
-  for insert with check (auth.uid() is not null);
+  for insert with check (auth.uid() is not null and host_id = auth.uid());
 
 -- teams : lecture si membre. Écriture via RPC hôte.
 create policy teams_select_member on public.teams
