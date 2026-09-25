@@ -146,7 +146,9 @@ packs 1──* pack_reports               profiles 1──* entitlements
 | `get_pack_preview(p_pack)` | 3 exemples d'un pack officiel | respecte `is_hidden` ; jamais la liste complète |
 | `submit_answer(p_game, p_idx, p_text, p_wager)` | upsert answer + wager | statut open, timer OK, wager valide (contraintes tranchent) |
 | `lock_question(p_game)` | `open → locked` + correction auto, idempotente | hôte **ou tout membre si `now() >= opened_at + duration − 2 s`** ; rejouée sans effet |
-| `reveal_answer(p_game)` | retourne réponse seulement si locked | sinon exception |
+| `reveal_answer(p_game)` | retourne réponse + transition `locked → reveal/final_reveal` | transition réservée à l'hôte ; lecture ensuite ouverte aux membres ; sinon exception |
+| `show_leaderboard(p_game)` | `reveal → leaderboard` (questions normales), idempotente | hôte uniquement ; `position < 10` |
+| `finish_game(p_game)` | `final_reveal → finished` (finale idx 10) | hôte uniquement |
 | `override_answer(p_answer_id, p_correct)` | correction hôte puis `recompute_player_stats(player)` depuis tout l'historique | hôte, partie non `finished` ; recalcule `score`, `best_streak`, `biggest_wager_won` |
 | `transfer_host(p_game, p_new_player?)` | change hôte, idempotent | hôte actuel **ou tout membre si hôte inactif (`last_seen_at < now() − 60 s`)** |
 | `get_pack_by_share_code(code)` | lecture pack partagé | respecte `is_hidden` |

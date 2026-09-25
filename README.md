@@ -32,5 +32,5 @@ AUCUN Firebase.
 
 ## Statut
 
-Phase 0 terminée (plan). En attente de « continue » pour Phase 1.
-Ne pas coder avant validation du plan.
+Phase 0 terminée (plan). Phase 1 implémentée (moteur pur + tests).
+Phase 2 implémentation/durcissement en cours (Supabase temps réel + anti-triche).

@@ -1,5 +1,6 @@
 // Écran de partie minimal Phase 2 : question courante, réponse + mise,
-// contrôles hôte (suivante, verrouiller, révéler). Le polish arrive Phase 4.
+// contrôles hôte (suivante, verrouiller, révéler, classement, terminer).
+// Le polish arrive Phase 4.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/supabase_client.dart';
@@ -129,6 +130,28 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
   }
 
+  Future<void> _showLeaderboard() async {
+    try {
+      await supa().rpc('show_leaderboard', params: {'p_game': widget.gameId});
+      await _loadQuestion();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      }
+    }
+  }
+
+  Future<void> _finish() async {
+    try {
+      await supa().rpc('finish_game', params: {'p_game': widget.gameId});
+      await _loadQuestion();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      }
+    }
+  }
+
   @override
   void dispose() {
     _rt?.dispose();
@@ -188,7 +211,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 ),
                 ElevatedButton(
                   onPressed: _reveal,
-                  child: const Text('Révéler la réponse'),
+                  child: const Text('Révéler la réponse (hôte)'),
+                ),
+                ElevatedButton(
+                  onPressed: _showLeaderboard,
+                  child: const Text('Classement (hôte, après reveal)'),
+                ),
+                ElevatedButton(
+                  onPressed: _finish,
+                  child: const Text('Terminer (hôte, après finale)'),
                 ),
                 if (_revealed != null)
                   Padding(
