@@ -1,0 +1,29 @@
+name: brainwager
+description: "Brainwager — Bet on what you know / Parie sur ce que tu sais. Party trivia game multijoueur festif, 100% original."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.6.2
+  cupertino_icons: ^1.0.8
+  supabase_flutter: ^2.17.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/logo/

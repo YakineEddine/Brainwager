@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "appTitle": "Brainwager",
+  "tagline": "Bet on what you know",
+  "createGame": "Create game",
+  "joinGame": "Join game",
+  "packs": "Packs",
+  "shop": "Shop",
+  "settings": "Settings",
+  "joinCode": "Join code",
+  "nickname": "Nickname",
+  "start": "Start",
+  "nextQuestion": "Next question",
+  "lockAnswers": "Lock answers",
+  "revealAnswer": "Reveal answer",
+  "finalWagerTitle": "Final question — wager 0, 10 or 20",
+  "@finalWagerTitle": { "description": "Title of final question screen" }
+}

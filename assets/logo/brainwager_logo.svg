@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Brainwager logo original : cerveau souriant + jeton B. Dessin maison. -->
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="#1E1B2E"/>
+  <circle cx="64" cy="60" r="30" fill="#7C3AED"/>
+  <circle cx="54" cy="52" r="6" fill="#2A2542"/>
+  <circle cx="74" cy="52" r="6" fill="#2A2542"/>
+  <circle cx="56" cy="66" r="4" fill="#fff"/>
+  <circle cx="72" cy="66" r="4" fill="#fff"/>
+  <path d="M54 74 Q64 82 74 74" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="92" cy="92" r="18" fill="#FFC93C" stroke="#1E1B2E" stroke-width="3"/>
+  <circle cx="92" cy="92" r="12" fill="none" stroke="#1E1B2E" stroke-width="2" stroke-dasharray="4 3"/>
+  <text x="92" y="99" font-size="16" font-weight="bold" text-anchor="middle" fill="#1E1B2E" font-family="sans-serif">B</text>
+</svg>

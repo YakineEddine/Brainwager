@@ -1,0 +1,17 @@
+{
+  "@@locale": "fr",
+  "appTitle": "Brainwager",
+  "tagline": "Parie sur ce que tu sais",
+  "createGame": "Créer une partie",
+  "joinGame": "Rejoindre",
+  "packs": "Packs",
+  "shop": "Boutique",
+  "settings": "Réglages",
+  "joinCode": "Code de partie",
+  "nickname": "Pseudo",
+  "start": "Démarrer",
+  "nextQuestion": "Question suivante",
+  "lockAnswers": "Verrouiller les réponses",
+  "revealAnswer": "Révéler la réponse",
+  "finalWagerTitle": "Question finale — mise 0, 10 ou 20"
+}
