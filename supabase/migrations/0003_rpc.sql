@@ -163,11 +163,15 @@ end;
 $$;
 
 -- Création de partie : game + hôte + tirage 10+1 (finale la plus difficile).
+-- Partage UGC : un pack non officiel et non possédé n'est utilisable que si
+-- l'appelant fournit le share_code exact (vérifié côté serveur).
+drop function if exists public.create_game(uuid, text, boolean, text, integer);
 create or replace function public.create_game(
   p_pack_id uuid, p_nickname text,
   p_team_mode boolean default false,
   p_language text default 'fr',
-  p_duration integer default 30
+  p_duration integer default 30,
+  p_share_code text default null
 )
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
@@ -188,9 +192,15 @@ begin
   select * into v_pack from public.packs where id = p_pack_id;
   if not found then raise exception 'pack-not-found'; end if;
   if v_pack.is_hidden then raise exception 'pack-hidden'; end if;
-  if v_pack.owner_id is distinct from auth.uid()
+  -- Visibilité : officiel → tous ; UGC → owner OU connaissance du share_code.
+  -- Le code est vérifié côté serveur (jamais côté client) : sans lui, le
+  -- partage par code serait inutilisable (ancien bug : rejet systématique).
+  if (v_pack.owner_id is distinct from auth.uid())
      and not (v_pack.is_official) then
-    raise exception 'pack-not-visible';
+    if p_share_code is null
+       or upper(trim(p_share_code)) <> upper(trim(v_pack.share_code)) then
+      raise exception 'pack-not-visible';
+    end if;
   end if;
   if v_pack.is_premium then
     if not exists (select 1 from public.entitlements e
@@ -612,7 +622,10 @@ begin
     select p.* into v_host_player from public.players p
     join public.games g on g.host_id = p.user_id and g.id = p.game_id
     where p.game_id = p_game limit 1;
-    if v_host_player.last_seen_at > now() - make_interval(secs => 60) then
+    -- Fail-closed : hôte introuvable ou sans heartbeat → on refuse.
+    -- (NULL > timestamptz vaut NULL, donc l'ancien test laissait passer.)
+    if not found or v_host_player.last_seen_at is null
+       or v_host_player.last_seen_at > now() - make_interval(secs => 60) then
       raise exception 'host-active';
     end if;
     if p_new_player is null then v_target := v_caller;
@@ -646,8 +659,8 @@ $$;
 -- Droits d'exécution : authenticated uniquement (anon Supabase non signé = rien).
 revoke all on function public.server_time() from public;
 grant execute on function public.server_time() to authenticated;
-revoke all on function public.create_game(uuid, text, boolean, text, integer) from public;
-grant execute on function public.create_game(uuid, text, boolean, text, integer) to authenticated;
+revoke all on function public.create_game(uuid, text, boolean, text, integer, text) from public;
+grant execute on function public.create_game(uuid, text, boolean, text, integer, text) to authenticated;
 revoke all on function public.join_game(text, text, uuid) from public;
 grant execute on function public.join_game(text, text, uuid) to authenticated;
 revoke all on function public.touch_presence(uuid) from public;
@@ -676,3 +689,16 @@ grant execute on function public.transfer_host(uuid, uuid) to authenticated;
 -- Interne uniquement : jamais appelable par le client (SECURITY DEFINER + écriture
 -- scores). Invoquée uniquement par lock_question / override_answer en interne.
 revoke all on function public.recompute_player_stats(uuid) from public, anon, authenticated;
+
+-- Helpers internes : jamais appelables par le client (SECURITY DEFINER).
+-- Les appels internes (create_game, lock_question, ...) s'exécutent en tant que
+-- owner et ne sont pas affectés par ces REVOKE. is_game_member est VOLONTAIREMENT
+-- exclu : les policies RLS 0002 l'appellent en tant que l'utilisateur courant.
+revoke all on function public._gen_code(integer) from public, anon, authenticated;
+revoke all on function public._ensure_profile() from public, anon, authenticated;
+revoke all on function public.is_game_host(uuid) from public, anon, authenticated;
+revoke all on function public.normalize_answer(text) from public, anon, authenticated;
+revoke all on function public.match_answer(text, text, text[], text) from public, anon, authenticated;
+-- Nettoyage : cron/owner uniquement (plus d'appel anon/authenticated direct ;
+-- exécution manuelle via Dashboard SQL en tant que owner si besoin).
+revoke all on function public.cleanup_old_games() from public, anon, authenticated;
