@@ -24,12 +24,20 @@ begin
 end;
 $$;
 
+-- plpgsql (pas sql) : même règle anti-inlining que is_game_member (0002).
 create or replace function public.is_game_host(p_game uuid)
-returns boolean language sql stable security definer set search_path = public as $$
-  select exists (
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  return exists (
     select 1 from public.games g
     where g.id = p_game and g.host_id = auth.uid()
   );
+end;
 $$;
 
 -- Normalisation miroir du Dart : minuscules, accents, ponctuation, articles, trim.

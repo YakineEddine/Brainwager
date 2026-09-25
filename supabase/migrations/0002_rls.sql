@@ -4,12 +4,21 @@
 -- À appliquer APRÈS 0001.
 
 -- Helpers (lecture seule, appelés dans les policies).
+-- SECURITY DEFINER + plpgsql OBLIGATOIRES ici : fonction SQL simple inlinée
+-- + SELECT sur players depuis une policy de players = récursion infinie (42P17).
 create or replace function public.is_game_member(p_game uuid)
-returns boolean language sql stable as $$
-  select exists (
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  return exists (
     select 1 from public.players p
     where p.game_id = p_game and p.user_id = auth.uid()
   );
+end;
 $$;
 
 -- profiles : soi-même uniquement.
