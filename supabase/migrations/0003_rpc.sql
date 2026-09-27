@@ -5,13 +5,13 @@
 -- Horloge serveur (mesure offset client).
 create or replace function public.server_time()
 returns timestamptz
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = public, extensions as $$
   select now();
 $$;
 
 -- Générateur de code sans caractères ambigus (0/O, 1/I/L exclus).
 create or replace function public._gen_code(p_len integer)
-returns text language plpgsql security definer set search_path = public as $$
+returns text language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_alphabet constant text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   v_out text := '';
@@ -30,7 +30,7 @@ returns boolean
 language plpgsql
 stable
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   return exists (
@@ -66,7 +66,7 @@ end;
 $$;
 
 create or replace function public.is_numeric_like(p_norm text)
-returns boolean language sql immutable security definer set search_path = public as $$
+returns boolean language sql immutable security definer set search_path = public, extensions as $$
   select p_norm ~ '^-?[0-9]+(\.[0-9]+)?$'
       or p_norm ~ '^(17|18|19|20)[0-9]{2}$'
       or regexp_replace(p_norm, '[\s\.]', '', 'g') ~ '^[0-9]+$';
@@ -98,16 +98,17 @@ begin
     return false;
   end if;
   if p_mode = 'exact' then return false; end if;
-  if public.levenshtein(v_p, v_e) <=
-     case when char_length(v_e) <= 5 then 1
-          when char_length(v_e) <= 8 then 2
-          else 3 end then
+  v_d := levenshtein(v_p, v_e);
+  v_thresh := case when char_length(v_e) <= 5 then 1
+                   when char_length(v_e) <= 8 then 2
+                   else 3 end;
+  if v_d <= v_thresh then
     return true;
   end if;
   if p_aliases is not null then
     foreach v_a in array p_aliases loop
       v_c := public.normalize_answer(v_a);
-      v_d := public.levenshtein(v_p, v_c);
+      v_d := levenshtein(v_p, v_c);
       v_thresh := case when char_length(v_c) <= 5 then 1
                        when char_length(v_c) <= 8 then 2
                        else 3 end;
@@ -120,7 +121,7 @@ $$;
 
 -- Recalcule score / best_streak / biggest_wager_won depuis tout l'historique.
 create or replace function public.recompute_player_stats(p_player uuid)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $$
 declare
   r record;
   v_score integer := 0;
@@ -162,7 +163,7 @@ $$;
 
 -- Assure la ligne profiles pour l'appelant (auth anonyme).
 create or replace function public._ensure_profile()
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $$
 begin
   insert into public.profiles (id)
   values (auth.uid())
@@ -181,7 +182,7 @@ create or replace function public.create_game(
   p_duration integer default 30,
   p_share_code text default null
 )
-returns jsonb language plpgsql security definer set search_path = public as $$
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_pack record;
   v_code text;
@@ -266,7 +267,7 @@ $$;
 create or replace function public.join_game(
   p_code text, p_nickname text, p_team_id uuid default null
 )
-returns jsonb language plpgsql security definer set search_path = public as $$
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_game record;
   v_player uuid;
@@ -300,7 +301,7 @@ $$;
 
 -- Heartbeat léger (pas d'UPDATE direct autorisé en RLS).
 create or replace function public.touch_presence(p_game uuid)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $$
 begin
   update public.players
   set last_seen_at = now(), is_connected = true
@@ -309,7 +310,7 @@ end;
 $$;
 
 create or replace function public.open_question(p_game uuid, p_idx integer)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_game record;
   v_status text;
@@ -340,7 +341,7 @@ end;
 $$;
 
 create or replace function public.start_game(p_game uuid)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $$
 begin
   perform public.open_question(p_game, 0);
 end;
@@ -348,7 +349,7 @@ $$;
 
 -- Question courante servie aux membres (SANS réponses).
 create or replace function public.get_current_question(p_game uuid)
-returns jsonb language plpgsql stable security definer set search_path = public as $$
+returns jsonb language plpgsql stable security definer set search_path = public, extensions as $$
 declare
   v_game record;
   v_prompt text;
@@ -379,7 +380,7 @@ $$;
 
 -- Fiche officielle : 3 exemples uniquement. UGC owner : liste complète.
 create or replace function public.get_pack_preview(p_pack uuid)
-returns jsonb language plpgsql stable security definer set search_path = public as $$
+returns jsonb language plpgsql stable security definer set search_path = public, extensions as $$
 declare
   v_pack record;
 begin
@@ -404,7 +405,7 @@ end;
 $$;
 
 create or replace function public.get_pack_by_share_code(p_code text)
-returns jsonb language plpgsql stable security definer set search_path = public as $$
+returns jsonb language plpgsql stable security definer set search_path = public, extensions as $$
 declare
   v_pack record;
 begin
@@ -420,7 +421,7 @@ $$;
 create or replace function public.submit_answer(
   p_game uuid, p_idx integer, p_text text, p_wager integer
 )
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_game record;
   v_player uuid;
@@ -471,7 +472,7 @@ $$;
 
 -- Verrouillage : hôte OU tout membre après expiration − 2 s. Idempotent.
 create or replace function public.lock_question(p_game uuid)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_game record;
   v_is_host boolean;
@@ -546,7 +547,7 @@ $$;
 
 -- Révélation : réponse seulement si verrouillé (ou après). Idempotent.
 create or replace function public.reveal_answer(p_game uuid)
-returns text language plpgsql security definer set search_path = public as $$
+returns text language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_game record;
   v_qid uuid;
@@ -579,7 +580,7 @@ $$;
 
 -- Correction manuelle hôte + recalcul complet (correction 7).
 create or replace function public.override_answer(p_answer_id uuid, p_correct boolean)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_ans record;
   v_game record;
@@ -607,7 +608,7 @@ $$;
 
 -- Transfert hôte : hôte actuel OU membre si hôte inactif depuis 60 s. Idempotent.
 create or replace function public.transfer_host(p_game uuid, p_new_player uuid default null)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_game record;
   v_caller uuid;
@@ -654,7 +655,7 @@ end;
 $$;
 
 create or replace function public.cleanup_old_games()
-returns integer language plpgsql security definer set search_path = public as $$
+returns integer language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_n integer;
 begin

@@ -8,6 +8,11 @@ declare
   v_pack uuid;
   v_q uuid;
 begin
+  -- Rejouable : no-op clair si le seed a déjà été appliqué (pas de pile DEMO01).
+  if exists (select 1 from public.packs where share_code = 'DEMO01') then
+    raise notice 'seed: pack DEMO01 déjà présent, rien à faire.';
+    return;
+  end if;
   insert into public.packs
     (title_fr, title_en, desc_fr, desc_en, is_official, is_premium, share_code)
   values

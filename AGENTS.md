@@ -18,4 +18,7 @@ gameplay source of truth; do not rewrite architecture blindly.
 * For a new Supabase migration, inspect the installed Supabase CLI with
   `--help` first and create the migration using the CLI, never invent a
   migration filename.
+* Fail-closed defaults: never rely on PUBLIC/anon/authenticated default
+  privileges. Every migration must explicitly GRANT only what it needs
+  (tables, functions, future defaults); least privilege always.
 * Do not merge or push directly to `main` without explicit instruction.

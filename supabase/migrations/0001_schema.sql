@@ -2,9 +2,12 @@
 -- 11 tables (doc 02 révisé). RLS activée ici, policies en 0002, RPC en 0003.
 -- Source règles : docs/02-supabase-model.md (relire avant d'appliquer).
 
-create extension if not exists "pgcrypto";
-create extension if not exists "unaccent";
-create extension if not exists "fuzzystrmatch";
+-- Extensions dans un schéma non exposé (Security Advisor) ; les fonctions
+-- SECURITY DEFINER utilisent search_path = public, extensions (voir 0003).
+create schema if not exists extensions;
+create extension if not exists "pgcrypto" with schema extensions;
+create extension if not exists "unaccent" with schema extensions;
+create extension if not exists "fuzzystrmatch" with schema extensions;
 
 -- Profils (1 ligne par user anon). AUCUN flag premium ici (voir entitlements).
 create table public.profiles (
