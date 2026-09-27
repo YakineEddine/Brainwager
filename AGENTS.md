@@ -21,4 +21,7 @@ gameplay source of truth; do not rewrite architecture blindly.
 * Fail-closed defaults: never rely on PUBLIC/anon/authenticated default
   privileges. Every migration must explicitly GRANT only what it needs
   (tables, functions, future defaults); least privilege always.
+* The migration filenames/versions committed to Git are the deployment history
+  source of truth. Never rename, recreate or repair an already-deployed migration
+  without explicit project-owner approval.
 * Do not merge or push directly to `main` without explicit instruction.
