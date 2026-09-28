@@ -25,6 +25,47 @@ class GameScreen extends ConsumerStatefulWidget {
   ConsumerState<GameScreen> createState() => _GameScreenState();
 }
 
+/// Vrai quand l'écran doit afficher l'attente lobby (question encore
+/// illisible : get_current_question lève `not-started` en lobby).
+/// Faux dès qu'une question est chargée (chemin question existant).
+bool selectsLobbyView({required bool hasQuestion}) => !hasQuestion;
+
+/// Attente lobby minimale (Phase 2) : texte d'attente + Presence observable.
+/// Bouton Démarrer réservé à l'hôte (players.is_host, jamais le pseudo).
+/// Aucun énoncé affiché ici : l'anti-triche reste intacte.
+class LobbyWaitingView extends StatelessWidget {
+  final bool isHost;
+  final int presenceCount;
+  final VoidCallback onStart;
+  const LobbyWaitingView({
+    super.key,
+    required this.isHost,
+    required this.presenceCount,
+    required this.onStart,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('En attente du lancement par l’hôte…'),
+          const SizedBox(height: 8),
+          Text('En ligne : $presenceCount'),
+          if (isHost) ...[
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: onStart,
+              child: const Text('Démarrer la partie'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _GameScreenState extends ConsumerState<GameScreen>
     with WidgetsBindingObserver {
   static const _config = GameConfig();
@@ -61,8 +102,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
     try {
       await _clock.calibrate();
       await _loadQuestion();
-      await _fetchOwnHostFlag();
       final session = ref.read(lobbyViewModelProvider).value;
+      if (session != null && mounted) {
+        // Hint initial : la ligne players.is_host reste l'autorité
+        // (transfert d'hôte possible) et _fetchOwnHostFlag confirme.
+        setState(() => _isHost = session.isHost);
+      }
+      await _fetchOwnHostFlag();
       final rt = GameRealtime(widget.gameId);
       _rt = rt;
       rt.subscribeChanges(
@@ -440,12 +486,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
         (q?['duration_sec'] as int?) ?? _config.defaultDurationSec;
     return Scaffold(
       appBar: AppBar(title: Text('Partie ${_status.isEmpty ? '' : '· $_status'}')),
-      body: q == null
-          ? const Center(child: Text('En attente du lancement par l’hôte…'))
+      body: selectsLobbyView(hasQuestion: q != null)
+          ? LobbyWaitingView(
+              isHost: _isHost,
+              presenceCount: _presenceCount,
+              onStart: _startOrNext,
+            )
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Text(q['prompt'] as String? ?? '',
+                Text(q?['prompt'] as String? ?? '',
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
                 CountdownRing(
