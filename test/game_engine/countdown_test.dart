@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:brainwager/shared/widgets/countdown_ring.dart';
+import 'package:brainwager/features/game_engine/timing.dart';
 
 void main() {
   test('restant = opened + duration − now, jamais négatif', () {

@@ -1,12 +1,19 @@
-// Écran de partie minimal Phase 2 : question courante, réponse + mise,
-// contrôles hôte (suivante, verrouiller, révéler, classement, terminer).
+// Écran de partie minimal Phase 2B : question courante, réponse + mise,
+// contrôles hôte, countdown serveur, heartbeat, auto-lock, reconnect.
+// Broadcast = hints (recharge l'état autoritaire). Aucun tick réseau.
 // Le polish arrive Phase 4.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/config/game_config.dart';
+import '../../core/network/heartbeat.dart';
 import '../../core/network/supabase_client.dart';
 import '../../core/network/realtime_service.dart';
 import '../../core/utils/clock.dart';
 import '../../shared/widgets/countdown_ring.dart';
+import '../game_engine/auto_lock.dart';
+import '../game_engine/timing.dart';
 import '../lobby/lobby_viewmodel.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
@@ -17,47 +24,205 @@ class GameScreen extends ConsumerStatefulWidget {
   ConsumerState<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends ConsumerState<GameScreen> {
+class _GameScreenState extends ConsumerState<GameScreen>
+    with WidgetsBindingObserver {
+  static const _config = GameConfig();
+
   Map<String, dynamic>? _question;
   String? _revealed;
   String _status = '';
+  bool _isHost = false;
+  int _remainingSec = 0;
+  int _lastPosition = -1;
   final _answerCtrl = TextEditingController();
   int _wager = 5;
   GameRealtime? _rt;
+  GameHeartbeat? _heartbeat;
+  Timer? _ticker;
   final _clock = BrainClock();
+  final _autoLock = AutoLockTracker();
+  bool _booting = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _boot();
   }
 
+  /// Boot/reconnect : recalibre, recharge l'état autoritaire, réabonne
+  /// (sans doublons : ancien GameRealtime toujours disposé avant).
   Future<void> _boot() async {
-    await _clock.calibrate();
-    await _loadQuestion();
-    final session = ref.read(lobbyViewModelProvider).value;
-    _rt = GameRealtime(widget.gameId);
-    _rt!.subscribeChanges(
-      onGames: (_) => _loadQuestion(),
-      onPlayers: (_) {},
-      onScores: (_) => _loadQuestion(),
-    );
-    if (session != null) {
-      await _rt!.subscribePresence(session.playerId, 'moi', (_) {});
+    if (_booting || !mounted) return;
+    _booting = true;
+    try {
+      await _clock.calibrate();
+      await _loadQuestion();
+      await _fetchOwnHostFlag();
+      final session = ref.read(lobbyViewModelProvider).value;
+      final rt = GameRealtime(widget.gameId);
+      _rt = rt;
+      rt.subscribeChanges(
+        onGames: (_) => _reloadFromServer(),
+        onPlayers: (rec) => _onPlayerRecord(rec, session?.playerId),
+        onScores: (_) => _reloadFromServer(),
+      );
+      rt.subscribeEvents((_) => _reloadFromServer());
+      if (session != null) {
+        await rt.subscribePresence(
+          playerId: session.playerId,
+          nickname: session.nickname,
+          onSync: (_) {},
+        );
+        _startHeartbeat();
+      }
+      _startTicker();
+    } finally {
+      _booting = false;
     }
+  }
+
+  /// Reconnect (resume/disconnect) : stoppe tout, dispose, reboot propre.
+  /// Le countdown repart de opened_at absolu : aucun tick manqué ne compte.
+  Future<void> _reconnect() async {
+    if (!mounted || _booting) return;
+    _ticker?.cancel();
+    _ticker = null;
+    _heartbeat?.dispose();
+    _heartbeat = null;
+    await _rt?.dispose();
+    _rt = null;
+    await _boot();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _reconnect();
+    }
+  }
+
+  Future<void> _reloadFromServer() async {
+    await _loadQuestion();
+    await _fetchOwnHostFlag();
   }
 
   Future<void> _loadQuestion() async {
     try {
-      final res =
-          await supa().rpc('get_current_question', params: {'p_game': widget.gameId});
+      final res = await supa()
+          .rpc('get_current_question', params: {'p_game': widget.gameId});
       if (!mounted) return;
+      final q = Map<String, dynamic>.from(res as Map);
+      final pos = (q['position'] as int?) ?? 0;
       setState(() {
-        _question = Map<String, dynamic>.from(res as Map);
-        _status = _question!['status'] as String? ?? '';
+        if (_lastPosition != -1 && pos != _lastPosition) {
+          _revealed = null; // Nouvelle question : réponse précédente périmée.
+        }
+        _lastPosition = pos;
+        _question = q;
+        _status = q['status'] as String? ?? '';
+        _remainingSec = _computeRemaining(q);
       });
+      _maybeAutoLock();
     } catch (_) {
       // Partie pas encore démarrée ou erreur réseau : on garde l'état.
+    }
+  }
+
+  /// Flag hôte depuis la ligne players (id stable, pas le pseudo).
+  Future<void> _fetchOwnHostFlag() async {
+    final session = ref.read(lobbyViewModelProvider).value;
+    if (session == null || session.playerId.isEmpty || !mounted) return;
+    try {
+      final row = await supa()
+          .from('players')
+          .select('is_host')
+          .eq('id', session.playerId)
+          .limit(1)
+          .single();
+      final flag = (row as Map)['is_host'] == true;
+      if (mounted && flag != _isHost) {
+        setState(() => _isHost = flag);
+      }
+    } catch (_) {
+      // RLS/réseau : on garde le flag de session.
+    }
+  }
+
+  void _onPlayerRecord(Map<String, dynamic> rec, String? ownPlayerId) {
+    if (ownPlayerId == null || ownPlayerId.isEmpty || !mounted) return;
+    if (rec['id'] == ownPlayerId && rec.containsKey('is_host')) {
+      final flag = rec['is_host'] == true;
+      if (flag != _isHost) setState(() => _isHost = flag);
+    }
+  }
+
+  int _computeRemaining(Map<String, dynamic> q) {
+    final openedRaw = q['opened_at'] as String?;
+    final duration = (q['duration_sec'] as int?) ?? _config.defaultDurationSec;
+    if (openedRaw == null) return duration;
+    final opened = DateTime.tryParse(openedRaw)?.toUtc();
+    if (opened == null) return duration;
+    return remainingSeconds(
+      openedAtUtc: opened,
+      durationSec: duration,
+      nowUtc: _clock.nowUtc(),
+    );
+  }
+
+  void _startTicker() {
+    _ticker?.cancel();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      final q = _question;
+      if (q == null) return;
+      setState(() => _remainingSec = _computeRemaining(q));
+      _maybeAutoLock();
+    });
+  }
+
+  void _startHeartbeat() {
+    _heartbeat?.dispose();
+    final hb = GameHeartbeat(
+      onBeat: () => supa().rpc('touch_presence', params: {
+        'p_game': widget.gameId,
+      }),
+      interval: const Duration(seconds: 15),
+    );
+    _heartbeat = hb;
+    hb.start(); // Beat immédiat + toutes les 15 s, sans chevauchement.
+  }
+
+  /// Auto-lock : une seule tentative par question et par client, au point
+  /// opened_at + duration − lockGraceSec. Le serveur tranche (idempotent).
+  /// Jamais de mutation locale avant confirmation serveur.
+  Future<void> _maybeAutoLock() async {
+    final q = _question;
+    if (q == null || !mounted) return;
+    if (_status != 'question_open' && _status != 'final_wager') return;
+    final openedRaw = q['opened_at'] as String?;
+    if (openedRaw == null) return;
+    final opened = DateTime.tryParse(openedRaw)?.toUtc();
+    if (opened == null) return;
+    final duration = (q['duration_sec'] as int?) ?? _config.defaultDurationSec;
+    if (!isLockDue(
+      openedAtUtc: opened,
+      durationSec: duration,
+      lockGraceSec: _config.lockGraceSec,
+      nowUtc: _clock.nowUtc(),
+    )) {
+      return;
+    }
+    final pos = (q['position'] as int?) ?? 0;
+    if (!_autoLock.shouldAttempt(pos)) return;
+    _autoLock.markAttempted(pos); // Avant l'appel : pas de retry infini.
+    try {
+      await supa().rpc('lock_question', params: {'p_game': widget.gameId});
+      await _rt?.broadcastEvent({'type': 'locked'});
+      await _loadQuestion();
+    } catch (_) {
+      // Serveur autoritaire (refus/idempotent) : on garde l'état rechargé.
+      await _loadQuestion();
     }
   }
 
@@ -154,7 +319,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   @override
   void dispose() {
-    _rt?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _ticker?.cancel();
+    _heartbeat?.dispose();
+    unawaited(_rt?.dispose());
     _answerCtrl.dispose();
     super.dispose();
   }
@@ -164,6 +332,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final q = _question;
     final isFinal = (q?['position'] as int? ?? 0) == 10;
     final wagers = isFinal ? [0, 10, 20] : List.generate(10, (i) => i + 1);
+    final duration =
+        (q?['duration_sec'] as int?) ?? _config.defaultDurationSec;
     return Scaffold(
       appBar: AppBar(title: Text('Partie ${_status.isEmpty ? '' : '· $_status'}')),
       body: q == null
@@ -174,7 +344,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 Text(q['prompt'] as String? ?? '',
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
-                CountdownRing(remainingSec: 30, durationSec: 30),
+                CountdownRing(
+                  remainingSec: _remainingSec,
+                  durationSec: duration,
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _answerCtrl,
@@ -201,26 +374,29 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   child: const Text('Valider (réponse + mise)'),
                 ),
                 const Divider(height: 32),
-                ElevatedButton(
-                  onPressed: _startOrNext,
-                  child: const Text('Démarrer / Question suivante (hôte)'),
-                ),
+                // Lock ouvert à tous (règles serveur) ; le reste est hôte.
                 ElevatedButton(
                   onPressed: _lock,
-                  child: const Text('Verrouiller (hôte, ou tous après timer)'),
+                  child: const Text('Verrouiller (tous après timer)'),
                 ),
-                ElevatedButton(
-                  onPressed: _reveal,
-                  child: const Text('Révéler la réponse (hôte)'),
-                ),
-                ElevatedButton(
-                  onPressed: _showLeaderboard,
-                  child: const Text('Classement (hôte, après reveal)'),
-                ),
-                ElevatedButton(
-                  onPressed: _finish,
-                  child: const Text('Terminer (hôte, après finale)'),
-                ),
+                if (_isHost) ...[
+                  ElevatedButton(
+                    onPressed: _startOrNext,
+                    child: const Text('Démarrer / Question suivante (hôte)'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _reveal,
+                    child: const Text('Révéler la réponse (hôte)'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _showLeaderboard,
+                    child: const Text('Classement (hôte, après reveal)'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _finish,
+                    child: const Text('Terminer (hôte, après finale)'),
+                  ),
+                ],
                 if (_revealed != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),

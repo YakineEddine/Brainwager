@@ -1,18 +1,8 @@
-// Compte à rebours 100 % client : restant = openedAt + duration − now.
-// Aucun broadcast périodique (correction 6). openedAt vient du serveur,
-// now est corrigé par l'offset mesuré via server_time().
+// Anneau de compte à rebours : affiche remainingSec / durationSec.
+// Le parent recalcule remainingSec à chaque seconde depuis opened_at absolu +
+// offset serveur, donc reprise/reconnect restent exactes sans recevoir de tick.
+// Aucun appel réseau ici, aucun timer interne (pas de dérive).
 import 'package:flutter/material.dart';
-
-/// Calcule le temps restant (secondes). Jamais négatif.
-int remainingSeconds({
-  required DateTime openedAtUtc,
-  required int durationSec,
-  required DateTime nowUtc,
-}) {
-  final end = openedAtUtc.add(Duration(seconds: durationSec));
-  final diff = end.difference(nowUtc).inSeconds;
-  return diff < 0 ? 0 : diff;
-}
 
 class CountdownRing extends StatelessWidget {
   final int remainingSec;
@@ -25,16 +15,21 @@ class CountdownRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final remaining = remainingSec < 0 ? 0 : remainingSec;
     final progress =
-        durationSec <= 0 ? 0.0 : remainingSec / durationSec;
+        durationSec <= 0 ? 0.0 : (remaining / durationSec).clamp(0.0, 1.0);
+    final urgent = remaining <= 5;
     return SizedBox(
       width: 72,
       height: 72,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          CircularProgressIndicator(value: progress),
-          Text('$remainingSec s'),
+          CircularProgressIndicator(
+            value: progress,
+            color: urgent ? Colors.redAccent : null,
+          ),
+          Text('$remaining s'),
         ],
       ),
     );

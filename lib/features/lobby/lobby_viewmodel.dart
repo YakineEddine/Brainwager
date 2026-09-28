@@ -9,11 +9,13 @@ class GameSession {
   final String playerId;
   final String joinCode;
   final bool isHost;
+  final String nickname;
   const GameSession({
     required this.gameId,
     required this.playerId,
     required this.joinCode,
     required this.isHost,
+    required this.nickname,
   });
 }
 
@@ -47,6 +49,7 @@ class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
         playerId: '', // hôte : player_id retrouvé au besoin via players
         joinCode: m['join_code'] as String,
         isHost: true,
+        nickname: n,
       );
       // Retrouve le player hôte pour la presence.
       final me = await c
@@ -61,6 +64,7 @@ class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
         playerId: (me as Map)['id'] as String,
         joinCode: session.joinCode,
         isHost: true,
+        nickname: n,
       );
       state = AsyncValue.data(full);
       return full;
@@ -88,6 +92,7 @@ class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
         playerId: m['player_id'] as String,
         joinCode: code.trim().toUpperCase(),
         isHost: false,
+        nickname: n,
       );
       state = AsyncValue.data(session);
       return session;
