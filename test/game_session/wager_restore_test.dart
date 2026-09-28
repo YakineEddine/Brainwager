@@ -23,17 +23,31 @@ void main() {
       expect(r.wager, 7);
     });
 
-    test('mise courante libre conservée (remplace la sauvée)', () {
+    test('mise courante libre conservée si aucune sauvegarde', () {
       final r = resolveWagerSelection(
         position: 3,
         current: 4,
         rows: rows([
           [0, 1],
+          [1, 5],
+        ]),
+      );
+      expect(r.saved, isNull);
+      expect(r.wager, 4);
+    });
+
+    test('A) sauvegarde serveur gagne sur le choix local', () {
+      final r = resolveWagerSelection(
+        position: 3,
+        current: 5,
+        rows: rows([
+          [0, 1],
           [3, 7],
         ]),
       );
-      expect(r.wager, 4);
+      expect(r.previousUsed, {1});
       expect(r.saved, 7);
+      expect(r.wager, 7);
     });
 
     test('sans sauvegarde : première valeur libre', () {
@@ -47,6 +61,18 @@ void main() {
       );
       expect(r.saved, isNull);
       expect(r.wager, 2);
+    });
+
+    test('B) finale : sauvegarde 20 gagne sur local 10', () {
+      final r = resolveWagerSelection(
+        position: 10,
+        current: 10,
+        rows: rows([
+          [10, 20],
+        ]),
+      );
+      expect(r.saved, 20);
+      expect(r.wager, 20);
     });
 
     test('finale : jamais 5, défaut 0, sauvegarde restaurée', () {
@@ -144,6 +170,66 @@ void main() {
           reason: s,
         );
       }
+    });
+  });
+
+  group('WagerLoadGuard (ready + anti-périmé)', () {
+    const idA = 'g|p|3|2026-09-20T12:00:00+00:00';
+    const idB = 'g|p|4|2026-09-20T12:01:00+00:00';
+
+    test('identité stable et distinctive', () {
+      const opened = '2026-09-20T12:00:00+00:00';
+      expect(
+        WagerLoadGuard.identity(
+          gameId: 'g',
+          playerId: 'p',
+          position: 3,
+          openedAt: opened,
+        ),
+        idA,
+      );
+      expect(idA == idB, isFalse);
+    });
+
+    test('D) début de (re)chargement -> ready false', () {
+      final g = WagerLoadGuard();
+      g.beginLoad(idA);
+      expect(g.ready, isFalse);
+      expect(g.finishLoad(idA, currentId: idA), isTrue);
+      expect(g.ready, isTrue);
+      g.beginLoad(idB);
+      expect(g.ready, isFalse);
+    });
+
+    test('E) succès correspondant et actuel -> true', () {
+      final g = WagerLoadGuard();
+      g.beginLoad(idA);
+      expect(g.finishLoad(idA, currentId: idA), isTrue);
+      expect(g.ready, isTrue);
+    });
+
+    test('F) échec -> reste false (pas de finish = pas de ready)', () {
+      final g = WagerLoadGuard();
+      g.beginLoad(idA);
+      // Aucun finishLoad : échec réseau simulé.
+      expect(g.ready, isFalse);
+    });
+
+    test('G) résultat vieille question : jeté, ready intact', () {
+      final g = WagerLoadGuard();
+      g.beginLoad(idA); // Chargement Q3.
+      g.beginLoad(idB); // Q4 entre-temps : Q3 périmée.
+      expect(g.finishLoad(idA, currentId: idB), isFalse);
+      expect(g.ready, isFalse);
+      expect(g.finishLoad(idB, currentId: idB), isTrue);
+      expect(g.ready, isTrue);
+    });
+
+    test('joueur différent : jeté', () {
+      final g = WagerLoadGuard();
+      g.beginLoad(idA);
+      expect(g.finishLoad(idA, currentId: 'g|autre|3|t'), isFalse);
+      expect(g.ready, isFalse);
     });
   });
 }

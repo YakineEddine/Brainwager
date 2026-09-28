@@ -57,6 +57,40 @@ bool startEnabledFor({required int memberCount, required int minPlayers}) =>
 bool canSubmitAnswer({required String status, required bool wagersReady}) =>
     canAnswerIn(status) && wagersReady;
 
+/// Garde de fraîcheur des mises (pure, testable) : un chargement démarré
+/// pour une identité question (jeu + joueur + position + opened_at) ne peut
+/// valider que cette identité. Boot/resume/reconnect/nouvelle question →
+/// beginLoad (ready=false) ; seul un finishLoad correspondant ET toujours
+/// actuel passe ready=true. Un résultat périmé est jeté sans toucher l'état.
+class WagerLoadGuard {
+  String? _pending;
+  bool ready = false;
+
+  static String identity({
+    required String gameId,
+    required String playerId,
+    required int position,
+    required String? openedAt,
+  }) =>
+      '$gameId|$playerId|$position|${openedAt ?? ''}';
+
+  void beginLoad(String id) {
+    ready = false;
+    _pending = id;
+  }
+
+  bool finishLoad(String id, {required String currentId}) {
+    if (id != _pending || id != currentId) return false;
+    ready = true;
+    return true;
+  }
+
+  void reset() {
+    _pending = null;
+    ready = false;
+  }
+}
+
 /// Verrou manuel : hôte sur question ouverte ; non-hôte seulement une fois
 /// le seuil local de lock tardif atteint (même seuil que l'auto-lock,
 /// calcul 100 % local, aucun réseau). Jamais hors question ouverte.
@@ -70,11 +104,14 @@ bool showLockFor({
   return lockDue;
 }
 
-/// État des mises résolu depuis les lignes wagers (pur, testable) :
+/// État des mises résolu depuis les lignes wagers (pur, testable).
+/// Priorité STRICTE (chargement autoritaire) :
+/// 1. mise sauvegardée de la question courante (restauration serveur) ;
+/// 2. choix local courant s'il est valide et libre ;
+/// 3. première valeur libre (0 en finale).
 /// - previousUsed : mises 1..10 des questions normales PRÉCÉDENTES
-///   (la mise de la question courante en est exclue : elle reste modifiable) ;
-/// - saved : mise enregistrée pour la question courante (restauration) ;
-/// - wager : sélection sûre (finale jamais périmée, sinon valeur libre).
+///   (la mise courante en est exclue : elle reste modifiable) ;
+/// - saved : mise enregistrée pour la question courante.
 ({Set<int> previousUsed, int? saved, int wager}) resolveWagerSelection({
   required int position,
   required int current,
@@ -96,18 +133,18 @@ bool showLockFor({
   }
   int wager;
   if (position == 10) {
-    if (finals.contains(current)) {
-      wager = current;
-    } else if (saved != null && finals.contains(saved)) {
+    if (saved != null && finals.contains(saved)) {
       wager = saved;
+    } else if (finals.contains(current)) {
+      wager = current;
     } else {
       wager = 0;
     }
   } else {
-    if (current >= 1 && current <= 10 && !prev.contains(current)) {
-      wager = current;
-    } else if (saved != null && saved >= 1 && saved <= 10) {
+    if (saved != null && saved >= 1 && saved <= 10) {
       wager = saved;
+    } else if (current >= 1 && current <= 10 && !prev.contains(current)) {
+      wager = current;
     } else {
       wager = fixWagerForQuestion(
         current: current,
@@ -220,7 +257,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
   bool _isHost = false;
   int _memberCount = 0;
   Set<int> _prevUsedWagers = {};
-  bool _wagersReady = false;
+  final _wagerGuard = WagerLoadGuard();
+  bool get _wagersReady => _wagerGuard.ready;
   int _remainingSec = 0;
   int _presenceCount = 0;
   int _lastPosition = -1;
@@ -372,10 +410,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
       _installAuthoritativeQuestion(fresh);
       if (isNew && mounted) {
         // Nouvelle question : purge l'état local de l'ancienne, mise sûre
-        // immédiate (finale jamais à 5), puis chargement autoritaire.
+        // immédiate (finale jamais à 5) ; le chargement autoritaire suit
+        // (reset ready + garde anti-périmé) et restaure la mise sauvée.
         _answerCtrl.clear();
         setState(() {
-          _wagersReady = false;
           if (pos == _config.finalQuestionIndex &&
               ![0, 10, 20].contains(_wager)) {
             _wager = 0;
@@ -472,21 +510,30 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
-  /// Mises autoritaires du joueur courant (RLS : ses lignes) :
-  /// distingue les mises des questions PRÉCÉDENTES de la mise éventuellement
-  /// déjà enregistrée pour la question courante (restaurée telle quelle,
-  /// modifiable avant lock). _wagersReady ne passe à vrai qu'après succès :
-  /// en cas d'échec, la soumission reste bloquée (safe) jusqu'au retry.
+  /// Mises autoritaires du joueur courant (RLS : ses lignes), protégées
+  /// contre les réponses périmées : l'identité (jeu + joueur + position +
+  /// opened_at) capturée au départ doit encore être l'identité courante à
+  /// l'arrivée, sinon le résultat est jeté (ni état ni ready modifiés).
+  /// Échec → ready reste false (soumission bloquée, retry au reload).
   Future<void> _loadOwnWagers() async {
+    if (!mounted) return;
     final session = ref.read(lobbyViewModelProvider).value;
     final pid = session?.playerId;
-    if (pid == null || pid.isEmpty || !mounted) return;
+    if (pid == null || pid.isEmpty) return;
+    final id = WagerLoadGuard.identity(
+      gameId: widget.gameId,
+      playerId: pid,
+      position: _lastPosition,
+      openedAt: _question?['opened_at'] as String?,
+    );
+    setState(() => _wagerGuard.beginLoad(id));
     try {
       final rows = await supa()
           .from('wagers')
           .select('amount,question_idx')
           .eq('game_id', widget.gameId)
           .eq('player_id', pid);
+      if (!mounted) return;
       final parsed = <({int idx, int amount})>[];
       for (final r in (rows as List)) {
         final m = Map<String, dynamic>.from(r as Map);
@@ -494,20 +541,28 @@ class _GameScreenState extends ConsumerState<GameScreen>
         final amt = m['amount'] as int?;
         if (idx != null && amt != null) parsed.add((idx: idx, amount: amt));
       }
-      if (!mounted) return;
       final pos = _lastPosition < 0 ? 0 : _lastPosition;
       final resolved = resolveWagerSelection(
         position: pos,
         current: _wager,
         rows: parsed,
       );
+      final nowPid =
+          ref.read(lobbyViewModelProvider).value?.playerId ?? '';
+      final currentId = WagerLoadGuard.identity(
+        gameId: widget.gameId,
+        playerId: nowPid,
+        position: _lastPosition,
+        openedAt: _question?['opened_at'] as String?,
+      );
+      final fresh = _wagerGuard.finishLoad(id, currentId: currentId);
+      if (!fresh || !mounted) return; // Périmé : on jette.
       setState(() {
         _prevUsedWagers = resolved.previousUsed;
         _wager = resolved.wager;
-        _wagersReady = true;
       });
     } catch (_) {
-      // Échec : soumission bloquée, retry au prochain reload/reconnect.
+      // Échec : ready reste false, retry au prochain reload/reconnect.
     }
   }
 

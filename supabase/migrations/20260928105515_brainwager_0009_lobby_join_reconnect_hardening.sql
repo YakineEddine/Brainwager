@@ -156,6 +156,9 @@ begin
   perform public._ensure_profile();
 
   -- E) Seul l'INSERT est protégé ; le diagnostic tranche la contrainte.
+  --    user_id_key → reprise already_joined (sinon RAISE d'origine) ;
+  --    nickname_key → nickname-taken ; toute autre contrainte → RAISE d'origine.
+  --    Aucune violation inconnue n'est déguisée ni renommée.
   begin
     insert into public.players (game_id, user_id, nickname, team_id)
     values (v_game.id, auth.uid(), v_n, p_team_id)
@@ -163,26 +166,6 @@ begin
   exception when unique_violation then
     get stacked diagnostics v_constraint = constraint_name;
     if v_constraint = 'players_game_id_user_id_key' then
-      -- Devenu membre entre-temps (course) : reprise idempotente.
-      select * into v_me from public.players p
-      where p.game_id = v_game.id and p.user_id = auth.uid();
-      if not found then raise exception 'nickname-taken'; end if;
-      update public.players
-      set last_seen_at = now(), is_connected = true
-      where id = v_me.id;
-      return jsonb_build_object(
-        'game_id', v_game.id,
-        'player_id', v_me.id,
-        'join_code', v_game.join_code,
-        'nickname', v_me.nickname,
-        'is_host', v_me.is_host,
-        'already_joined', true
-      );
-    elsif v_constraint = 'players_game_id_nickname_key' then
-      raise exception 'nickname-taken';
-    else
-      -- Violation inattendue : jamais déguisée en nickname-taken.
-      -- Revérifier l'adhésion (course), sinon erreur explicite.
       select * into v_me from public.players p
       where p.game_id = v_game.id and p.user_id = auth.uid();
       if found then
@@ -198,7 +181,11 @@ begin
           'already_joined', true
         );
       end if;
-      raise exception 'unexpected-unique-violation';
+      raise;
+    elsif v_constraint = 'players_game_id_nickname_key' then
+      raise exception 'nickname-taken';
+    else
+      raise;
     end if;
   end;
 
