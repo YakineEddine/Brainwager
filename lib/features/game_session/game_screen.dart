@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/config/game_config.dart';
 import '../../core/network/heartbeat.dart';
 import '../../core/network/supabase_client.dart';
@@ -51,6 +52,72 @@ bool showFinishFor({required String status, required bool isHost}) =>
 /// Démarrer : éligibilité membres (le serveur exige minPlayers).
 bool startEnabledFor({required int memberCount, required int minPlayers}) =>
     memberCount >= minPlayers;
+
+/// Soumission : question ouverte ET mises autoritaires chargées.
+bool canSubmitAnswer({required String status, required bool wagersReady}) =>
+    canAnswerIn(status) && wagersReady;
+
+/// Verrou manuel : hôte sur question ouverte ; non-hôte seulement une fois
+/// le seuil local de lock tardif atteint (même seuil que l'auto-lock,
+/// calcul 100 % local, aucun réseau). Jamais hors question ouverte.
+bool showLockFor({
+  required String status,
+  required bool isHost,
+  required bool lockDue,
+}) {
+  if (status != 'question_open' && status != 'final_wager') return false;
+  if (isHost) return true;
+  return lockDue;
+}
+
+/// État des mises résolu depuis les lignes wagers (pur, testable) :
+/// - previousUsed : mises 1..10 des questions normales PRÉCÉDENTES
+///   (la mise de la question courante en est exclue : elle reste modifiable) ;
+/// - saved : mise enregistrée pour la question courante (restauration) ;
+/// - wager : sélection sûre (finale jamais périmée, sinon valeur libre).
+({Set<int> previousUsed, int? saved, int wager}) resolveWagerSelection({
+  required int position,
+  required int current,
+  required List<({int idx, int amount})> rows,
+}) {
+  const finals = [0, 10, 20];
+  final prev = <int>{};
+  int? saved;
+  for (final r in rows) {
+    if (position == 10) {
+      if (r.idx == 10) saved = r.amount;
+    } else {
+      if (r.idx == position) {
+        saved = r.amount;
+      } else if (r.idx >= 0 && r.idx < 10) {
+        prev.add(r.amount);
+      }
+    }
+  }
+  int wager;
+  if (position == 10) {
+    if (finals.contains(current)) {
+      wager = current;
+    } else if (saved != null && finals.contains(saved)) {
+      wager = saved;
+    } else {
+      wager = 0;
+    }
+  } else {
+    if (current >= 1 && current <= 10 && !prev.contains(current)) {
+      wager = current;
+    } else if (saved != null && saved >= 1 && saved <= 10) {
+      wager = saved;
+    } else {
+      wager = fixWagerForQuestion(
+        current: current,
+        position: position,
+        usedNormal: prev,
+      );
+    }
+  }
+  return (previousUsed: prev, saved: saved, wager: wager);
+}
 
 /// Remet la mise sur une valeur valide à l'ouverture d'une question :
 /// finale -> 0/10/20 (jamais le défaut 5 périmé), normale -> sélection
@@ -152,7 +219,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
   String? _joinCode;
   bool _isHost = false;
   int _memberCount = 0;
-  Set<int> _usedWagers = {};
+  Set<int> _prevUsedWagers = {};
+  bool _wagersReady = false;
   int _remainingSec = 0;
   int _presenceCount = 0;
   int _lastPosition = -1;
@@ -303,14 +371,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
       final isNew = _lastPosition != -1 && pos != _lastPosition;
       _installAuthoritativeQuestion(fresh);
       if (isNew && mounted) {
-        // Nouvelle question : purge l'état local de l'ancienne.
+        // Nouvelle question : purge l'état local de l'ancienne, mise sûre
+        // immédiate (finale jamais à 5), puis chargement autoritaire.
         _answerCtrl.clear();
         setState(() {
-          _wager = fixWagerForQuestion(
-            current: _wager,
-            position: pos,
-            usedNormal: _usedWagers,
-          );
+          _wagersReady = false;
+          if (pos == _config.finalQuestionIndex &&
+              ![0, 10, 20].contains(_wager)) {
+            _wager = 0;
+          }
         });
         _loadOwnWagers();
       }
@@ -403,8 +472,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
-  /// Mises normales déjà utilisées par le joueur courant (RLS : ses lignes).
-  /// Recale la mise sur une valeur libre.
+  /// Mises autoritaires du joueur courant (RLS : ses lignes) :
+  /// distingue les mises des questions PRÉCÉDENTES de la mise éventuellement
+  /// déjà enregistrée pour la question courante (restaurée telle quelle,
+  /// modifiable avant lock). _wagersReady ne passe à vrai qu'après succès :
+  /// en cas d'échec, la soumission reste bloquée (safe) jusqu'au retry.
   Future<void> _loadOwnWagers() async {
     final session = ref.read(lobbyViewModelProvider).value;
     final pid = session?.playerId;
@@ -415,26 +487,46 @@ class _GameScreenState extends ConsumerState<GameScreen>
           .select('amount,question_idx')
           .eq('game_id', widget.gameId)
           .eq('player_id', pid);
-      final used = <int>{};
+      final parsed = <({int idx, int amount})>[];
       for (final r in (rows as List)) {
         final m = Map<String, dynamic>.from(r as Map);
-        if ((m['question_idx'] as int?) != 10) {
-          final a = m['amount'] as int?;
-          if (a != null) used.add(a);
-        }
+        final idx = m['question_idx'] as int?;
+        final amt = m['amount'] as int?;
+        if (idx != null && amt != null) parsed.add((idx: idx, amount: amt));
       }
       if (!mounted) return;
+      final pos = _lastPosition < 0 ? 0 : _lastPosition;
+      final resolved = resolveWagerSelection(
+        position: pos,
+        current: _wager,
+        rows: parsed,
+      );
       setState(() {
-        _usedWagers = used;
-        _wager = fixWagerForQuestion(
-          current: _wager,
-          position: _lastPosition,
-          usedNormal: used,
-        );
+        _prevUsedWagers = resolved.previousUsed;
+        _wager = resolved.wager;
+        _wagersReady = true;
       });
     } catch (_) {
-      // RLS/réseau : le serveur tranche de toute façon à la soumission.
+      // Échec : soumission bloquée, retry au prochain reload/reconnect.
     }
+  }
+
+  /// Seuil de lock tardif évalué en pur local (aucun réseau) : pilote
+  /// l'affichage du bouton Lock non-hôte (même seuil que l'auto-lock).
+  bool _lockDueLocal() {
+    final q = _question;
+    final openedRaw = q?['opened_at'] as String?;
+    final opened =
+        openedRaw == null ? null : DateTime.tryParse(openedRaw)?.toUtc();
+    if (opened == null) return false;
+    final duration =
+        (q?['duration_sec'] as int?) ?? _config.defaultDurationSec;
+    return isLockDue(
+      openedAtUtc: opened,
+      durationSec: duration,
+      lockGraceSec: _config.lockGraceSec,
+      nowUtc: _clock.nowUtc(),
+    );
   }
 
   int _computeRemaining(Map<String, dynamic> q) {
@@ -569,7 +661,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   Future<void> _submit() async {
     final q = _question;
-    if (q == null) return;
+    if (q == null || !_wagersReady) return;
     try {
       await supa().rpc('submit_answer', params: {
         'p_game': widget.gameId,
@@ -670,7 +762,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
               Text(err),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.go('/home'),
                 child: const Text('Retour'),
               ),
             ],
@@ -704,6 +796,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final pos = (q?['position'] as int?) ?? 0;
     final isFinal = pos == _config.finalQuestionIndex;
     final answering = canAnswerIn(_status);
+    final submittable = canSubmitAnswer(
+      status: _status,
+      wagersReady: _wagersReady,
+    );
+    final lockDue = _lockDueLocal();
     final wagers =
         isFinal ? _config.finalWagers : List.generate(10, (i) => i + 1);
     final duration = (q?['duration_sec'] as int?) ?? _config.defaultDurationSec;
@@ -740,24 +837,36 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   label: Text('$w'),
                   selected: _wager == w,
                   onSelected: !answering ||
-                          (!isFinal && _usedWagers.contains(w))
+                          !_wagersReady ||
+                          (!isFinal && _prevUsedWagers.contains(w))
                       ? null
                       : (_) => setState(() => _wager = w),
                 ),
             ],
           ),
+          if (answering && !_wagersReady)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text('Chargement des mises…'),
+            ),
           const SizedBox(height: 12),
           ElevatedButton(
-            onPressed: answering ? _submit : null,
+            onPressed: submittable ? _submit : null,
             child: const Text('Valider (réponse + mise)'),
           ),
           const Divider(height: 32),
-          // Lock ouvert à tous hors finished (règles serveur) ; le reste
-          // est strictement piloté par le statut (serveur toujours requis).
-          if (_status != 'finished')
+          // Lock piloté par le statut (+ seuil local pour les non-hôtes) ;
+          // le reste est strictement piloté par le statut (serveur requis).
+          if (showLockFor(
+            status: _status,
+            isHost: _isHost,
+            lockDue: lockDue,
+          ))
             ElevatedButton(
               onPressed: _lock,
-              child: const Text('Verrouiller (tous après timer)'),
+              child: Text(
+                _isHost ? 'Verrouiller' : 'Verrouiller (après timer)',
+              ),
             ),
           if (showRevealFor(status: _status, isHost: _isHost))
             ElevatedButton(

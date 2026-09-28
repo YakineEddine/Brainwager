@@ -36,6 +36,37 @@ void main() {
     );
   });
 
+  test('erreurs de course/serveur -> messages FR, jamais de brut', () {
+    expect(
+      friendlyGameError(Exception('not-allowed-yet')),
+      'Verrouillage trop tôt : attends la fin du timer.',
+    );
+    expect(
+      friendlyGameError(Exception('locked')),
+      'Temps écoulé : question verrouillée.',
+    );
+    expect(
+      friendlyGameError(Exception('empty-answer')),
+      'Écris une réponse avant de valider.',
+    );
+    expect(
+      friendlyGameError(Exception('invalid-wager')),
+      'Mise invalide pour cette question.',
+    );
+    expect(
+      friendlyGameError(Exception('invalid-final-wager')),
+      'Mise finale : 0, 10 ou 20 uniquement.',
+    );
+    expect(
+      friendlyGameError(Exception('wrong-index')),
+      'Question périmée : recharge l’état.',
+    );
+    expect(
+      friendlyGameError(Exception('bad-transition')),
+      'Action impossible dans l’état actuel.',
+    );
+  });
+
   test('erreur inconnue -> message générique (détail brut gardé en debug)',
       () {
     expect(

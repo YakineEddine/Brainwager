@@ -93,8 +93,11 @@ begin
 end;
 $$;
 
--- B) join_game : ré-entrée idempotente (même partie démarrée), sinon join
---    normal avec plafond 50 joueurs. Vrai doublon de pseudo → nickname-taken.
+-- B) join_game : ré-entrée idempotente (même partie démarrée, avec
+--    refresh de présence), sinon join normal plafonné à 50. Doublon réel
+--    de pseudo → nickname-taken. Seul l'INSERT est protégé par EXCEPTION ;
+--    le diagnostic de contrainte tranche user_id vs nickname (jamais de
+--    mapping aveugle vers nickname-taken).
 create or replace function public.join_game(
   p_code text, p_nickname text, p_team_id uuid default null
 )
@@ -104,17 +107,26 @@ declare
   v_me record;
   v_player uuid;
   v_n text := trim(p_nickname);
+  v_constraint text;
 begin
+  -- A) Utilisateur authentifié + pseudo bien formé.
   if auth.uid() is null then raise exception 'not-authenticated'; end if;
+  if char_length(v_n) < 2 or char_length(v_n) > 20 then
+    raise exception 'invalid-nickname';
+  end if;
+  -- B) Partie par code normalisé.
   select * into v_game from public.games
   where join_code = upper(trim(p_code));
   if not found then raise exception 'game-not-found'; end if;
 
-  -- Déjà membre : reprise idempotente, même partie démarrée. Le pseudo
-  -- retourné est celui du serveur (l'appelant peut en taper un autre).
+  -- C) Déjà membre : refresh présence + reprise idempotente,
+  --    même partie démarrée. Le pseudo retourné est celui du serveur.
   select * into v_me from public.players p
   where p.game_id = v_game.id and p.user_id = auth.uid();
   if found then
+    update public.players
+    set last_seen_at = now(), is_connected = true
+    where id = v_me.id;
     return jsonb_build_object(
       'game_id', v_game.id,
       'player_id', v_me.id,
@@ -125,25 +137,70 @@ begin
     );
   end if;
 
-  if char_length(v_n) < 2 or char_length(v_n) > 20 then
-    raise exception 'invalid-nickname';
-  end if;
+  -- D) Nouveau joueur : lobby only, plafond 50, équipe, doublon explicite.
   if v_game.status <> 'lobby' then raise exception 'game-already-started'; end if;
+  if (select count(*) from public.players p
+      where p.game_id = v_game.id) >= 50 then
+    raise exception 'game-full';
+  end if;
   if p_team_id is not null
      and not exists (select 1 from public.teams t
                      where t.id = p_team_id and t.game_id = v_game.id) then
     raise exception 'team-not-found';
   end if;
-  if (select count(*) from public.players p
-      where p.game_id = v_game.id) >= 50 then
-    raise exception 'game-full';
+  if exists (select 1 from public.players p
+             where p.game_id = v_game.id and p.nickname = v_n) then
+    raise exception 'nickname-taken';
   end if;
 
   perform public._ensure_profile();
 
-  insert into public.players (game_id, user_id, nickname, team_id)
-  values (v_game.id, auth.uid(), v_n, p_team_id)
-  returning id into v_player;
+  -- E) Seul l'INSERT est protégé ; le diagnostic tranche la contrainte.
+  begin
+    insert into public.players (game_id, user_id, nickname, team_id)
+    values (v_game.id, auth.uid(), v_n, p_team_id)
+    returning id into v_player;
+  exception when unique_violation then
+    get stacked diagnostics v_constraint = constraint_name;
+    if v_constraint = 'players_game_id_user_id_key' then
+      -- Devenu membre entre-temps (course) : reprise idempotente.
+      select * into v_me from public.players p
+      where p.game_id = v_game.id and p.user_id = auth.uid();
+      if not found then raise exception 'nickname-taken'; end if;
+      update public.players
+      set last_seen_at = now(), is_connected = true
+      where id = v_me.id;
+      return jsonb_build_object(
+        'game_id', v_game.id,
+        'player_id', v_me.id,
+        'join_code', v_game.join_code,
+        'nickname', v_me.nickname,
+        'is_host', v_me.is_host,
+        'already_joined', true
+      );
+    elsif v_constraint = 'players_game_id_nickname_key' then
+      raise exception 'nickname-taken';
+    else
+      -- Violation inattendue : jamais déguisée en nickname-taken.
+      -- Revérifier l'adhésion (course), sinon erreur explicite.
+      select * into v_me from public.players p
+      where p.game_id = v_game.id and p.user_id = auth.uid();
+      if found then
+        update public.players
+        set last_seen_at = now(), is_connected = true
+        where id = v_me.id;
+        return jsonb_build_object(
+          'game_id', v_game.id,
+          'player_id', v_me.id,
+          'join_code', v_game.join_code,
+          'nickname', v_me.nickname,
+          'is_host', v_me.is_host,
+          'already_joined', true
+        );
+      end if;
+      raise exception 'unexpected-unique-violation';
+    end if;
+  end;
 
   return jsonb_build_object(
     'game_id', v_game.id,
@@ -153,21 +210,6 @@ begin
     'is_host', false,
     'already_joined', false
   );
-exception when unique_violation then
-  -- Course : devenu membre entre-temps → reprise, sinon vrai doublon.
-  select * into v_me from public.players p
-  where p.game_id = v_game.id and p.user_id = auth.uid();
-  if found then
-    return jsonb_build_object(
-      'game_id', v_game.id,
-      'player_id', v_me.id,
-      'join_code', v_game.join_code,
-      'nickname', v_me.nickname,
-      'is_host', v_me.is_host,
-      'already_joined', true
-    );
-  end if;
-  raise exception 'nickname-taken';
 end;
 $$;
 
@@ -190,9 +232,6 @@ create or replace function public.start_game(p_game uuid)
 returns void language plpgsql security definer set search_path = public, extensions as $$
 begin
   if not public.is_game_host(p_game) then raise exception 'not-host'; end if;
-  if not exists (select 1 from public.games g where g.id = p_game) then
-    raise exception 'game-not-found';
-  end if;
   if (select count(*) from public.players p
       where p.game_id = p_game) < 2 then
     raise exception 'not-enough-players';

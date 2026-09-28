@@ -51,6 +51,17 @@ GameSession sessionFromJoinResponse({
   );
 }
 
+/// Lève not-member si la ligne est absente (RLS : zéro ligne = non-membre).
+Map<String, dynamic> requirePlayerRow(Map<String, dynamic>? row) {
+  if (row == null) throw Exception('not-member');
+  return row;
+}
+
+/// Lève not-member si la partie est introuvable après adhésion établie.
+Map<String, dynamic> requireGameRow(Map<String, dynamic>? row) {
+  if (row == null) throw Exception('not-member');
+  return row;
+}
 /// Session restaurée depuis les lignes autoritaires (refresh/deep link) :
 /// players (id, nickname, is_host) + games (join_code). Identité stable
 /// user_id, jamais le pseudo.
@@ -132,29 +143,35 @@ class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
   }
 
   /// Restaure la session après refresh/deep link via l'utilisateur courant.
-  /// Lève (not-member via RLS) si l'utilisateur n'est pas membre.
+  /// Zéro ligne (RLS) = non-membre explicite, pas d'erreur générique.
   Future<GameSession> restoreGameSession(String gameId) async {
     final userId = supa().auth.currentUser?.id;
     if (userId == null) throw Exception('session-absente');
     state = const AsyncValue.loading();
     try {
-      final me = await supa()
+      final meRaw = await supa()
           .from('players')
           .select('id,nickname,is_host')
           .eq('game_id', gameId)
           .eq('user_id', userId)
           .limit(1)
-          .single();
-      final g = await supa()
+          .maybeSingle();
+      final me = requirePlayerRow(
+        meRaw == null ? null : Map<String, dynamic>.from(meRaw as Map),
+      );
+      final gRaw = await supa()
           .from('games')
           .select('join_code,status')
           .eq('id', gameId)
           .limit(1)
-          .single();
+          .maybeSingle();
+      final g = requireGameRow(
+        gRaw == null ? null : Map<String, dynamic>.from(gRaw as Map),
+      );
       final full = buildRestoredSession(
         gameId: gameId,
-        playerRow: Map<String, dynamic>.from(me as Map),
-        gameRow: Map<String, dynamic>.from(g as Map),
+        playerRow: me,
+        gameRow: g,
       );
       state = AsyncValue.data(full);
       return full;

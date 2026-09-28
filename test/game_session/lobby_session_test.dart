@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:brainwager/core/utils/game_errors.dart';
 import 'package:brainwager/features/lobby/lobby_viewmodel.dart';
 
 void main() {
@@ -64,5 +65,23 @@ void main() {
     expect(s.joinCode, 'ZZZZZ');
     expect(s.isHost, isTrue);
     expect(s.nickname, 'Moi');
+  });
+
+  test('restore sans ligne joueur => not-member explicite', () {
+    expect(() => requirePlayerRow(null), throwsException);
+    try {
+      requirePlayerRow(null);
+    } catch (e) {
+      expect(friendlyGameError(e), 'Tu n’es pas membre de cette partie.');
+    }
+    expect(
+      requirePlayerRow({'id': 'p1'})['id'],
+      'p1',
+    );
+  });
+
+  test('partie manquante après adhésion => not-member explicite', () {
+    expect(() => requireGameRow(null), throwsException);
+    expect(requireGameRow({'join_code': 'X'})['join_code'], 'X');
   });
 }

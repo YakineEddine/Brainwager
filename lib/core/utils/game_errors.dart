@@ -23,6 +23,28 @@ String friendlyGameError(Object error) {
   if (s.contains('not-open')) {
     return 'Question fermée : attends la suivante.';
   }
+  if (s.contains('not-locked')) {
+    return 'La question n’est pas encore verrouillée.';
+  }
+  if (s.contains('not-allowed-yet')) {
+    return 'Verrouillage trop tôt : attends la fin du timer.';
+  }
+  if (s.contains('locked')) return 'Temps écoulé : question verrouillée.';
+  if (s.contains('empty-answer')) {
+    return 'Écris une réponse avant de valider.';
+  }
+  if (s.contains('invalid-final-wager')) {
+    return 'Mise finale : 0, 10 ou 20 uniquement.';
+  }
+  if (s.contains('invalid-wager')) {
+    return 'Mise invalide pour cette question.';
+  }
+  if (s.contains('wrong-index')) {
+    return 'Question périmée : recharge l’état.';
+  }
+  if (s.contains('bad-transition')) {
+    return 'Action impossible dans l’état actuel.';
+  }
   if (s.contains('wager-already-used')) {
     return 'Mise déjà utilisée : choisis-en une autre.';
   }
