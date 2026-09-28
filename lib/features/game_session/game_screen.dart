@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/config/game_config.dart';
 import '../../core/network/heartbeat.dart';
@@ -30,27 +31,44 @@ class GameScreen extends ConsumerStatefulWidget {
 /// Faux dès qu'une question est chargée (chemin question existant).
 bool selectsLobbyView({required bool hasQuestion}) => !hasQuestion;
 
-/// Attente lobby minimale (Phase 2) : texte d'attente + Presence observable.
-/// Bouton Démarrer réservé à l'hôte (players.is_host, jamais le pseudo).
-/// Aucun énoncé affiché ici : l'anti-triche reste intacte.
+/// Attente lobby minimale (Phase 2) : texte d'attente + code de partie +
+/// Presence observable. Bouton Démarrer réservé à l'hôte (players.is_host,
+/// jamais le pseudo). Aucun énoncé affiché ici : l'anti-triche reste intacte.
+/// Le code n'est affiché que pendant l'attente (jamais en partie).
 class LobbyWaitingView extends StatelessWidget {
   final bool isHost;
   final int presenceCount;
+  final String? joinCode;
   final VoidCallback onStart;
+  final Future<void> Function(String code) onCopyCode;
   const LobbyWaitingView({
     super.key,
     required this.isHost,
     required this.presenceCount,
+    required this.joinCode,
     required this.onStart,
+    required this.onCopyCode,
   });
 
   @override
   Widget build(BuildContext context) {
+    final code = joinCode;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text('En attente du lancement par l’hôte…'),
+          const SizedBox(height: 8),
+          const Text('Code de partie'),
+          Text(
+            code == null || code.isEmpty ? '…' : code,
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          if (code != null && code.isNotEmpty)
+            TextButton(
+              onPressed: () => onCopyCode(code),
+              child: const Text('Copier le code'),
+            ),
           const SizedBox(height: 8),
           Text('En ligne : $presenceCount'),
           if (isHost) ...[
@@ -73,6 +91,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   Map<String, dynamic>? _question;
   String? _revealed;
   String _status = '';
+  String? _joinCode;
   bool _isHost = false;
   int _remainingSec = 0;
   int _presenceCount = 0;
@@ -106,9 +125,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
       if (session != null && mounted) {
         // Hint initial : la ligne players.is_host reste l'autorité
         // (transfert d'hôte possible) et _fetchOwnHostFlag confirme.
-        setState(() => _isHost = session.isHost);
+        setState(() {
+          _isHost = session.isHost;
+          // Hint immédiat (mémoire) : la source autoritaire (ligne games
+          // via RLS) confirme/charge ensuite, y compris sans session.
+          if (session.joinCode.isNotEmpty) _joinCode = session.joinCode;
+        });
       }
       await _fetchOwnHostFlag();
+      await _loadLobbyMeta();
       final rt = GameRealtime(widget.gameId);
       _rt = rt;
       rt.subscribeChanges(
@@ -161,6 +186,31 @@ class _GameScreenState extends ConsumerState<GameScreen>
   Future<void> _reloadFromServer() async {
     await _loadQuestion();
     await _fetchOwnHostFlag();
+    await _loadLobbyMeta();
+  }
+
+  /// Métadonnées lobby autoritaires (ligne games via RLS existante) :
+  /// join_code affiché pendant l'attente uniquement. Fonctionne sans
+  /// session mémoire (refresh navigateur, deep link /game/:id).
+  /// Jamais de code inventé : échec => placeholder, rechargé au prochain
+  /// reload autoritaire (Changes/reconnect), sans polling.
+  Future<void> _loadLobbyMeta() async {
+    if (!mounted || _question != null) return;
+    try {
+      final row = await supa()
+          .from('games')
+          .select('join_code')
+          .eq('id', widget.gameId)
+          .limit(1)
+          .single();
+      final code = (row as Map)['join_code'] as String?;
+      if (!mounted || code == null || code.isEmpty || code == _joinCode) {
+        return;
+      }
+      setState(() => _joinCode = code);
+    } catch (_) {
+      // RLS/réseau : placeholder conservé, rechargé au prochain reload.
+    }
   }
 
   /// Rattrapage après reconnect foreground (le resume seul ne suffit pas) :
@@ -398,6 +448,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
+  /// Copie le code lobby (Clipboard) + confirmation discrète.
+  Future<void> _copyJoinCode(String code) async {
+    await Clipboard.setData(ClipboardData(text: code));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Code copié')),
+      );
+    }
+  }
+
   Future<void> _startOrNext() async {
     final q = _question;
     try {
@@ -490,7 +550,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
           ? LobbyWaitingView(
               isHost: _isHost,
               presenceCount: _presenceCount,
+              joinCode: _joinCode,
               onStart: _startOrNext,
+              onCopyCode: _copyJoinCode,
             )
           : ListView(
               padding: const EdgeInsets.all(16),

@@ -6,6 +6,8 @@ Future<void> _pumpLobby(
   WidgetTester tester, {
   required bool isHost,
   int presenceCount = 2,
+  String? joinCode = '3MFKX',
+  Future<void> Function(String code)? onCopyCode,
 }) {
   return tester.pumpWidget(
     MaterialApp(
@@ -13,7 +15,9 @@ Future<void> _pumpLobby(
         body: LobbyWaitingView(
           isHost: isHost,
           presenceCount: presenceCount,
+          joinCode: joinCode,
           onStart: () {},
+          onCopyCode: onCopyCode ?? (_) async {},
         ),
       ),
     ),
@@ -51,12 +55,49 @@ void main() {
           body: LobbyWaitingView(
             isHost: true,
             presenceCount: 1,
+            joinCode: '3MFKX',
             onStart: () => called = true,
+            onCopyCode: (_) async {},
           ),
         ),
       ),
     );
     await tester.tap(find.text('Démarrer la partie'));
     expect(called, isTrue);
+  });
+
+  testWidgets('lobby : code de partie affiché', (tester) async {
+    await _pumpLobby(tester, isHost: false, joinCode: '3MFKX');
+    expect(find.text('Code de partie'), findsOneWidget);
+    expect(find.text('3MFKX'), findsOneWidget);
+  });
+
+  testWidgets('copie : le bouton transmet le code attendu', (tester) async {
+    String? copied;
+    await _pumpLobby(
+      tester,
+      isHost: false,
+      joinCode: '3MFKX',
+      onCopyCode: (code) async => copied = code,
+    );
+    await tester.tap(find.text('Copier le code'));
+    expect(copied, '3MFKX');
+  });
+
+  testWidgets('code absent : placeholder neutre, pas de bouton copie',
+      (tester) async {
+    await _pumpLobby(tester, isHost: true, joinCode: null);
+    expect(find.text('…'), findsOneWidget);
+    expect(find.text('Copier le code'), findsNothing);
+    // L'hôte garde son Start même sans code chargé.
+    expect(find.text('Démarrer la partie'), findsOneWidget);
+  });
+
+  testWidgets('lobby : aucun contenu de question', (tester) async {
+    await _pumpLobby(tester, isHost: false, joinCode: '3MFKX');
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Ta réponse'), findsNothing);
+    expect(find.textContaining('Valider'), findsNothing);
+    expect(find.textContaining('Bonne réponse'), findsNothing);
   });
 }
