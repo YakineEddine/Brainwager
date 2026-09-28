@@ -1,5 +1,6 @@
-// Session de partie Phase 2 : create/join via RPC, pack démo DEMO01.
-// Le sélecteur de packs arrive en Phase 3 ; ici on vise le multijoueur brut.
+// Session de partie Phase 2B : create/join/restore via RPC + lignes RLS.
+// Pack démo DEMO01 (sélecteur Phase 3 plus tard). Les constructeurs purs
+// ci-dessous sont testés sans Supabase ; les méthodes ne font que l'IO.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/supabase_client.dart';
 import '../../core/utils/profanity_filter.dart';
@@ -17,6 +18,54 @@ class GameSession {
     required this.isHost,
     required this.nickname,
   });
+}
+
+/// Session depuis la réponse create_game (player_id retourné par le
+/// serveur, migration 0009 : plus de requête players de rattrapage).
+GameSession sessionFromCreateResponse({
+  required String nickname,
+  required Map<String, dynamic> res,
+}) {
+  return GameSession(
+    gameId: res['game_id'] as String,
+    playerId: res['player_id'] as String,
+    joinCode: (res['join_code'] as String?) ?? '',
+    isHost: true,
+    nickname: nickname,
+  );
+}
+
+/// Session depuis la réponse join_game. Si already_joined, le pseudo
+/// retourné par le serveur fait foi (l'appelant a pu en taper un autre).
+GameSession sessionFromJoinResponse({
+  required String typedNickname,
+  required String fallbackCode,
+  required Map<String, dynamic> res,
+}) {
+  return GameSession(
+    gameId: res['game_id'] as String,
+    playerId: res['player_id'] as String,
+    joinCode: (res['join_code'] as String?) ?? fallbackCode,
+    isHost: (res['is_host'] as bool?) ?? false,
+    nickname: (res['nickname'] as String?) ?? typedNickname,
+  );
+}
+
+/// Session restaurée depuis les lignes autoritaires (refresh/deep link) :
+/// players (id, nickname, is_host) + games (join_code). Identité stable
+/// user_id, jamais le pseudo.
+GameSession buildRestoredSession({
+  required String gameId,
+  required Map<String, dynamic> playerRow,
+  required Map<String, dynamic> gameRow,
+}) {
+  return GameSession(
+    gameId: gameId,
+    playerId: playerRow['id'] as String,
+    joinCode: (gameRow['join_code'] as String?) ?? '',
+    isHost: (playerRow['is_host'] as bool?) ?? false,
+    nickname: (playerRow['nickname'] as String?) ?? '',
+  );
 }
 
 class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
@@ -43,31 +92,9 @@ class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
         'p_language': 'fr',
         'p_duration': 30,
       });
-      final m = res as Map;
-      final session = GameSession(
-        gameId: m['game_id'] as String,
-        playerId: '', // hôte : player_id retrouvé au besoin via players
-        joinCode: m['join_code'] as String,
-        isHost: true,
+      final full = sessionFromCreateResponse(
         nickname: n,
-      );
-      // Retrouve le player hôte par identité stable (game_id + user_id),
-      // jamais par pseudo (non unique entre parties, modifiable).
-      final userId = supa().auth.currentUser?.id;
-      if (userId == null) throw Exception('session-absente');
-      final me = await c
-          .from('players')
-          .select('id')
-          .eq('game_id', session.gameId)
-          .eq('user_id', userId)
-          .limit(1)
-          .single();
-      final full = GameSession(
-        gameId: session.gameId,
-        playerId: (me as Map)['id'] as String,
-        joinCode: session.joinCode,
-        isHost: true,
-        nickname: n,
+        res: Map<String, dynamic>.from(res as Map),
       );
       state = AsyncValue.data(full);
       return full;
@@ -83,22 +110,54 @@ class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
   }) async {
     final n = nickname.trim();
     if (!isNicknameClean(n)) throw Exception('pseudo-invalide');
+    final fallbackCode = code.trim().toUpperCase();
     state = const AsyncValue.loading();
     try {
       final res = await supa().rpc('join_game', params: {
-        'p_code': code.trim().toUpperCase(),
+        'p_code': fallbackCode,
         'p_nickname': n,
       });
-      final m = res as Map;
-      final session = GameSession(
-        gameId: m['game_id'] as String,
-        playerId: m['player_id'] as String,
-        joinCode: code.trim().toUpperCase(),
-        isHost: false,
-        nickname: n,
+      // already_joined == true : reprise normale, pas une erreur.
+      final full = sessionFromJoinResponse(
+        typedNickname: n,
+        fallbackCode: fallbackCode,
+        res: Map<String, dynamic>.from(res as Map),
       );
-      state = AsyncValue.data(session);
-      return session;
+      state = AsyncValue.data(full);
+      return full;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  /// Restaure la session après refresh/deep link via l'utilisateur courant.
+  /// Lève (not-member via RLS) si l'utilisateur n'est pas membre.
+  Future<GameSession> restoreGameSession(String gameId) async {
+    final userId = supa().auth.currentUser?.id;
+    if (userId == null) throw Exception('session-absente');
+    state = const AsyncValue.loading();
+    try {
+      final me = await supa()
+          .from('players')
+          .select('id,nickname,is_host')
+          .eq('game_id', gameId)
+          .eq('user_id', userId)
+          .limit(1)
+          .single();
+      final g = await supa()
+          .from('games')
+          .select('join_code,status')
+          .eq('id', gameId)
+          .limit(1)
+          .single();
+      final full = buildRestoredSession(
+        gameId: gameId,
+        playerRow: Map<String, dynamic>.from(me as Map),
+        gameRow: Map<String, dynamic>.from(g as Map),
+      );
+      state = AsyncValue.data(full);
+      return full;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;

@@ -1,7 +1,8 @@
-// Écrans lobby Phase 2 : create/join réels via RPC (pack démo DEMO01).
+// Écrans lobby Phase 2B : create/join/restore via RPC (pack démo DEMO01).
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/game_errors.dart';
 import 'lobby_viewmodel.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -76,7 +77,8 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('$e')),
+                            SnackBar(
+                                content: Text(friendlyGameError(e))),
                           );
                         }
                       }
@@ -141,7 +143,8 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('$e')),
+                            SnackBar(
+                                content: Text(friendlyGameError(e))),
                           );
                         }
                       }
