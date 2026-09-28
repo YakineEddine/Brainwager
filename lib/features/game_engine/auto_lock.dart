@@ -17,3 +17,26 @@ class AutoLockTracker {
     _attempted.clear();
   }
 }
+
+/// Décision pure d'auto-lock : le client peut-il tirer son unique tentative
+/// lock_question ? Protège contre les snapshots périmés (le RPC ne prend que
+/// p_game : un état local en retard verrouillerait la MAUVAISE question).
+/// Exige : pas encore tenté + seuil atteint + question fraîche identique
+/// (position ET opened_at) + statut frais ouvert.
+bool mayAttemptAutoLock({
+  required int localPosition,
+  required String? localOpenedAt,
+  required int freshPosition,
+  required String? freshOpenedAt,
+  required String freshStatus,
+  required bool lockDue,
+  required bool notYetAttempted,
+}) {
+  if (!notYetAttempted || !lockDue) return false;
+  if (freshStatus != 'question_open' && freshStatus != 'final_wager') {
+    return false;
+  }
+  if (localPosition != freshPosition) return false;
+  if ((localOpenedAt ?? '') != (freshOpenedAt ?? '')) return false;
+  return true;
+}

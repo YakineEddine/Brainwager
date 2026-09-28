@@ -21,4 +21,55 @@ void main() {
     t.reset();
     expect(t.shouldAttempt(3), isTrue);
   });
+
+  group('mayAttemptAutoLock (snapshot périmé)', () {
+    const opened = '2026-09-20T12:00:00+00:00';
+
+    bool decide({
+      int localPos = 3,
+      String? localOpened = opened,
+      int freshPos = 3,
+      String? freshOpened = opened,
+      String freshStatus = 'question_open',
+      bool due = true,
+      bool fresh = true,
+    }) =>
+        mayAttemptAutoLock(
+          localPosition: localPos,
+          localOpenedAt: localOpened,
+          freshPosition: freshPos,
+          freshOpenedAt: freshOpened,
+          freshStatus: freshStatus,
+          lockDue: due,
+          notYetAttempted: fresh,
+        );
+
+    test('même position + même opened_at + due => peut verrouiller', () {
+      expect(decide(), isTrue);
+    });
+
+    test('position différente => ne doit pas verrouiller', () {
+      expect(decide(freshPos: 4), isFalse);
+    });
+
+    test('même position mais opened_at différent => ne doit pas verrouiller',
+        () {
+      expect(
+        decide(freshOpened: '2026-09-20T12:01:00+00:00'),
+        isFalse,
+      );
+    });
+
+    test('statut frais non ouvert => ne doit pas verrouiller', () {
+      for (final s in ['reveal', 'leaderboard', 'lobby', 'question_locked']) {
+        expect(decide(freshStatus: s), isFalse, reason: s);
+      }
+      expect(decide(freshStatus: 'final_wager'), isTrue);
+    });
+
+    test('pas due ou déjà tenté => ne doit pas verrouiller', () {
+      expect(decide(due: false), isFalse);
+      expect(decide(fresh: false), isFalse);
+    });
+  });
 }

@@ -13,6 +13,7 @@ import '../../core/network/realtime_service.dart';
 import '../../core/utils/clock.dart';
 import '../../shared/widgets/countdown_ring.dart';
 import '../game_engine/auto_lock.dart';
+import '../game_engine/reveal_policy.dart';
 import '../game_engine/timing.dart';
 import '../lobby/lobby_viewmodel.dart';
 
@@ -33,6 +34,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   String _status = '';
   bool _isHost = false;
   int _remainingSec = 0;
+  int _presenceCount = 0;
   int _lastPosition = -1;
   final _answerCtrl = TextEditingController();
   int _wager = 5;
@@ -66,13 +68,20 @@ class _GameScreenState extends ConsumerState<GameScreen>
         onGames: (_) => _reloadFromServer(),
         onPlayers: (rec) => _onPlayerRecord(rec, session?.playerId),
         onScores: (_) => _reloadFromServer(),
+        onSubscribed: ({required bool isReconnect}) {
+          // Les Changes ne rejouent pas l'historique manqué : sur reconnect
+          // (pas sur jonction initiale couverte par _boot), rattraper l'état.
+          if (isReconnect) _catchUpAfterReconnect();
+        },
       );
       rt.subscribeEvents((_) => _reloadFromServer());
       if (session != null) {
         await rt.subscribePresence(
           playerId: session.playerId,
           nickname: session.nickname,
-          onSync: (_) {},
+          onSync: (state) {
+            if (mounted) setState(() => _presenceCount = state.length);
+          },
         );
         _startHeartbeat();
       }
@@ -107,6 +116,39 @@ class _GameScreenState extends ConsumerState<GameScreen>
     await _fetchOwnHostFlag();
   }
 
+  /// Rattrapage après reconnect foreground (le resume seul ne suffit pas) :
+  /// recalibre, recharge question/statut/hôte, restaure la réponse révélée,
+  /// recalcule le countdown depuis opened_at, garantit le heartbeat.
+  Future<void> _catchUpAfterReconnect() async {
+    if (!mounted) return;
+    await _clock.calibrate();
+    await _reloadFromServer();
+    final session = ref.read(lobbyViewModelProvider).value;
+    final hb = _heartbeat;
+    if (session != null && (hb == null || !hb.isRunning)) {
+      _startHeartbeat();
+    }
+  }
+
+  /// Synchronise la réponse officiellement révélée pour TOUS les membres
+  /// (l'hôte la connaît via _reveal, les autres via cet appel autorisé dès
+  /// que le statut est reveal/leaderboard/final_reveal/finished).
+  /// Jamais en question_open/final_wager ni en question_locked.
+  Future<void> _syncRevealedAnswer() async {
+    if (!mounted || _revealed != null) return;
+    if (!maySyncReadRevealed(_status)) return;
+    final pos = _lastPosition;
+    try {
+      final res =
+          await supa().rpc('reveal_answer', params: {'p_game': widget.gameId});
+      // Course : position changée pendant l'appel → réponse obsolète, on jette.
+      if (!mounted || pos != _lastPosition) return;
+      setState(() => _revealed = res as String);
+    } catch (_) {
+      // Lock entre-temps / réseau : le prochain load réessaiera.
+    }
+  }
+
   Future<void> _loadQuestion() async {
     try {
       final res = await supa()
@@ -124,6 +166,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _remainingSec = _computeRemaining(q);
       });
       _maybeAutoLock();
+      await _syncRevealedAnswer();
     } catch (_) {
       // Partie pas encore démarrée ou erreur réseau : on garde l'état.
     }
@@ -194,28 +237,63 @@ class _GameScreenState extends ConsumerState<GameScreen>
   }
 
   /// Auto-lock : une seule tentative par question et par client, au point
-  /// opened_at + duration − lockGraceSec. Le serveur tranche (idempotent).
-  /// Jamais de mutation locale avant confirmation serveur.
+  /// opened_at + duration − lockGraceSec. ANTI-PÉRIMÉ : lock_question ne
+  /// prend que p_game, donc on relit la question autoritaire et on ne
+  /// verrouille que si c'est la MÊME question (position + opened_at) encore
+  /// ouverte et due. Sinon on installe le frais et on laisse sa logique agir.
+  /// Le serveur tranche toujours (idempotent). Jamais de mutation locale
+  /// avant confirmation serveur.
   Future<void> _maybeAutoLock() async {
     final q = _question;
     if (q == null || !mounted) return;
     if (_status != 'question_open' && _status != 'final_wager') return;
-    final openedRaw = q['opened_at'] as String?;
-    if (openedRaw == null) return;
-    final opened = DateTime.tryParse(openedRaw)?.toUtc();
-    if (opened == null) return;
-    final duration = (q['duration_sec'] as int?) ?? _config.defaultDurationSec;
-    if (!isLockDue(
-      openedAtUtc: opened,
-      durationSec: duration,
-      lockGraceSec: _config.lockGraceSec,
-      nowUtc: _clock.nowUtc(),
+    final localPos = (q['position'] as int?) ?? 0;
+    if (!_autoLock.shouldAttempt(localPos)) return;
+    final localOpenedAt = q['opened_at'] as String?;
+    // 1-2. Snapshot local + relecture autoritaire fraîche.
+    Map<String, dynamic> fresh;
+    try {
+      final res = await supa()
+          .rpc('get_current_question', params: {'p_game': widget.gameId});
+      fresh = Map<String, dynamic>.from(res as Map);
+    } catch (_) {
+      return; // Réseau/état indisponible : on ne verrouille pas à l'aveugle.
+    }
+    if (!mounted) return;
+    // 3-5. Décision pure sur le frais.
+    final freshOpenedAt = fresh['opened_at'] as String?;
+    final freshOpened =
+        freshOpenedAt == null ? null : DateTime.tryParse(freshOpenedAt)?.toUtc();
+    final freshDuration =
+        (fresh['duration_sec'] as int?) ?? _config.defaultDurationSec;
+    final due = freshOpened != null &&
+        isLockDue(
+          openedAtUtc: freshOpened,
+          durationSec: freshDuration,
+          lockGraceSec: _config.lockGraceSec,
+          nowUtc: _clock.nowUtc(),
+        );
+    if (!mayAttemptAutoLock(
+      localPosition: localPos,
+      localOpenedAt: localOpenedAt,
+      freshPosition: (fresh['position'] as int?) ?? 0,
+      freshOpenedAt: freshOpenedAt,
+      freshStatus: fresh['status'] as String? ?? '',
+      lockDue: due,
+      notYetAttempted: _autoLock.shouldAttempt(localPos),
     )) {
+      // 4. Périmé : installer le frais, sa logique timer prend le relais.
+      final pos = (fresh['position'] as int?) ?? 0;
+      setState(() {
+        if (pos != _lastPosition) _revealed = null;
+        _lastPosition = pos;
+        _question = fresh;
+        _status = fresh['status'] as String? ?? '';
+        _remainingSec = _computeRemaining(fresh);
+      });
       return;
     }
-    final pos = (q['position'] as int?) ?? 0;
-    if (!_autoLock.shouldAttempt(pos)) return;
-    _autoLock.markAttempted(pos); // Avant l'appel : pas de retry infini.
+    _autoLock.markAttempted(localPos); // Avant l'appel : pas de retry infini.
     try {
       await supa().rpc('lock_question', params: {'p_game': widget.gameId});
       await _rt?.broadcastEvent({'type': 'locked'});
@@ -348,6 +426,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   remainingSec: _remainingSec,
                   durationSec: duration,
                 ),
+                const SizedBox(height: 4),
+                // Debug Phase 2 : Presence observable (pas une autorité).
+                Text('En ligne : $_presenceCount'),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _answerCtrl,

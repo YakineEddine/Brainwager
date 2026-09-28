@@ -4,7 +4,8 @@ Device A = hôte · Device B = joueur. Prérequis : migrations 0001–0008
 appliquées, pack DEMO01 seedé, Anonymous sign-ins activés.
 
 1. A crée une partie (pack démo), B rejoint avec le code.
-2. A et B se voient en Presence (pastille/liste selon UI du moment).
+2. A et B affichent chacun « En ligne : 2 » (Presence temps réel, debug
+   Phase 2 — pas une autorité d'appartenance).
 3. A démarre la Q0 : les deux countdowns affichent ~30 s (écart ≤ ~1 s).
 4. B passe en arrière-plan 10–20 s puis revient : le restant affiché est
    correct (recalcul depuis `opened_at`, sans rattrapage de ticks).

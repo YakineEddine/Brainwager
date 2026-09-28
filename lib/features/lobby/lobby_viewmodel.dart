@@ -51,12 +51,15 @@ class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
         isHost: true,
         nickname: n,
       );
-      // Retrouve le player hôte pour la presence.
+      // Retrouve le player hôte par identité stable (game_id + user_id),
+      // jamais par pseudo (non unique entre parties, modifiable).
+      final userId = supa().auth.currentUser?.id;
+      if (userId == null) throw Exception('session-absente');
       final me = await c
           .from('players')
           .select('id')
           .eq('game_id', session.gameId)
-          .eq('nickname', n)
+          .eq('user_id', userId)
           .limit(1)
           .single();
       final full = GameSession(
