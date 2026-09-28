@@ -43,6 +43,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   Timer? _ticker;
   final _clock = BrainClock();
   final _autoLock = AutoLockTracker();
+  bool _autoLockCheckInFlight = false;
   bool _booting = false;
 
   @override
@@ -149,22 +150,30 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
+  /// Installe un snapshot autoritaire (question/statut/countdown) en un seul
+  /// setState : détecte le changement de question, purge la réponse révélée
+  /// périmée, garde l'UI cohérente. N'appelle ni auto-lock ni sync : les
+  /// appelants déclenchent explicitement la suite (pas de récursion).
+  void _installAuthoritativeQuestion(Map<String, dynamic> fresh) {
+    if (!mounted) return;
+    final pos = (fresh['position'] as int?) ?? 0;
+    setState(() {
+      if (_lastPosition != -1 && pos != _lastPosition) {
+        _revealed = null; // Nouvelle question : réponse précédente périmée.
+      }
+      _lastPosition = pos;
+      _question = fresh;
+      _status = fresh['status'] as String? ?? '';
+      _remainingSec = _computeRemaining(fresh);
+    });
+  }
+
   Future<void> _loadQuestion() async {
     try {
       final res = await supa()
           .rpc('get_current_question', params: {'p_game': widget.gameId});
       if (!mounted) return;
-      final q = Map<String, dynamic>.from(res as Map);
-      final pos = (q['position'] as int?) ?? 0;
-      setState(() {
-        if (_lastPosition != -1 && pos != _lastPosition) {
-          _revealed = null; // Nouvelle question : réponse précédente périmée.
-        }
-        _lastPosition = pos;
-        _question = q;
-        _status = q['status'] as String? ?? '';
-        _remainingSec = _computeRemaining(q);
-      });
+      _installAuthoritativeQuestion(Map<String, dynamic>.from(res as Map));
       _maybeAutoLock();
       await _syncRevealedAnswer();
     } catch (_) {
@@ -236,71 +245,88 @@ class _GameScreenState extends ConsumerState<GameScreen>
     hb.start(); // Beat immédiat + toutes les 15 s, sans chevauchement.
   }
 
-  /// Auto-lock : une seule tentative par question et par client, au point
-  /// opened_at + duration − lockGraceSec. ANTI-PÉRIMÉ : lock_question ne
-  /// prend que p_game, donc on relit la question autoritaire et on ne
-  /// verrouille que si c'est la MÊME question (position + opened_at) encore
-  /// ouverte et due. Sinon on installe le frais et on laisse sa logique agir.
-  /// Le serveur tranche toujours (idempotent). Jamais de mutation locale
-  /// avant confirmation serveur.
+  /// Auto-lock : ZÉRO appel réseau avant le seuil local
+  /// (opened_at + duration − lockGraceSec) : le ticker 1 s reste 100 % local.
+  /// Au seuil : au plus une validation fraîche à la fois (garde in-flight),
+  /// tentative réclamée par identité (position + opened_at) AVANT tout réseau
+  /// (un échec ne rejoue pas chaque seconde). ANTI-PÉRIMÉ : lock_question ne
+  /// prend que p_game, donc on ne verrouille que si le frais est la MÊME
+  /// question encore ouverte et due ; sinon on installe le frais et sa
+  /// logique timer prend le relais. Serveur toujours autoritaire.
+  /// Jamais de mutation locale avant confirmation serveur.
   Future<void> _maybeAutoLock() async {
     final q = _question;
     if (q == null || !mounted) return;
     if (_status != 'question_open' && _status != 'final_wager') return;
     final localPos = (q['position'] as int?) ?? 0;
-    if (!_autoLock.shouldAttempt(localPos)) return;
     final localOpenedAt = q['opened_at'] as String?;
-    // 1-2. Snapshot local + relecture autoritaire fraîche.
-    Map<String, dynamic> fresh;
-    try {
-      final res = await supa()
-          .rpc('get_current_question', params: {'p_game': widget.gameId});
-      fresh = Map<String, dynamic>.from(res as Map);
-    } catch (_) {
-      return; // Réseau/état indisponible : on ne verrouille pas à l'aveugle.
-    }
-    if (!mounted) return;
-    // 3-5. Décision pure sur le frais.
-    final freshOpenedAt = fresh['opened_at'] as String?;
-    final freshOpened =
-        freshOpenedAt == null ? null : DateTime.tryParse(freshOpenedAt)?.toUtc();
-    final freshDuration =
-        (fresh['duration_sec'] as int?) ?? _config.defaultDurationSec;
-    final due = freshOpened != null &&
-        isLockDue(
-          openedAtUtc: freshOpened,
-          durationSec: freshDuration,
-          lockGraceSec: _config.lockGraceSec,
-          nowUtc: _clock.nowUtc(),
-        );
-    if (!mayAttemptAutoLock(
-      localPosition: localPos,
+    final duration = (q['duration_sec'] as int?) ?? _config.defaultDurationSec;
+    if (!isFreshnessProbeEligible(
       localOpenedAt: localOpenedAt,
-      freshPosition: (fresh['position'] as int?) ?? 0,
-      freshOpenedAt: freshOpenedAt,
-      freshStatus: fresh['status'] as String? ?? '',
-      lockDue: due,
-      notYetAttempted: _autoLock.shouldAttempt(localPos),
+      durationSec: duration,
+      lockGraceSec: _config.lockGraceSec,
+      nowUtc: _clock.nowUtc(),
     )) {
-      // 4. Périmé : installer le frais, sa logique timer prend le relais.
-      final pos = (fresh['position'] as int?) ?? 0;
-      setState(() {
-        if (pos != _lastPosition) _revealed = null;
-        _lastPosition = pos;
-        _question = fresh;
-        _status = fresh['status'] as String? ?? '';
-        _remainingSec = _computeRemaining(fresh);
-      });
+      return; // Avant le seuil : aucun réseau.
+    }
+    if (_autoLockCheckInFlight) return;
+    if (!_autoLock.shouldAttempt(
+      position: localPos,
+      openedAt: localOpenedAt,
+    )) {
       return;
     }
-    _autoLock.markAttempted(localPos); // Avant l'appel : pas de retry infini.
+    _autoLock.markAttempted(position: localPos, openedAt: localOpenedAt);
+    _autoLockCheckInFlight = true;
     try {
-      await supa().rpc('lock_question', params: {'p_game': widget.gameId});
-      await _rt?.broadcastEvent({'type': 'locked'});
-      await _loadQuestion();
-    } catch (_) {
-      // Serveur autoritaire (refus/idempotent) : on garde l'état rechargé.
-      await _loadQuestion();
+      Map<String, dynamic> fresh;
+      try {
+        final res = await supa().rpc(
+          'get_current_question',
+          params: {'p_game': widget.gameId},
+        );
+        fresh = Map<String, dynamic>.from(res as Map);
+      } catch (_) {
+        return; // Réseau indisponible : tentative consommée, pas de retry.
+      }
+      if (!mounted) return;
+      final freshOpenedAt = fresh['opened_at'] as String?;
+      final freshOpened = freshOpenedAt == null
+          ? null
+          : DateTime.tryParse(freshOpenedAt)?.toUtc();
+      final freshDuration =
+          (fresh['duration_sec'] as int?) ?? _config.defaultDurationSec;
+      final due = freshOpened != null &&
+          isLockDue(
+            openedAtUtc: freshOpened,
+            durationSec: freshDuration,
+            lockGraceSec: _config.lockGraceSec,
+            nowUtc: _clock.nowUtc(),
+          );
+      if (!mayAttemptAutoLock(
+        localPosition: localPos,
+        localOpenedAt: localOpenedAt,
+        freshPosition: (fresh['position'] as int?) ?? 0,
+        freshOpenedAt: freshOpenedAt,
+        freshStatus: fresh['status'] as String? ?? '',
+        lockDue: due,
+        // Disponibilité établie par la réclamation ci-dessus (identité).
+        notYetAttempted: true,
+      )) {
+        _installAuthoritativeQuestion(fresh);
+        await _syncRevealedAnswer();
+        return;
+      }
+      try {
+        await supa().rpc('lock_question', params: {'p_game': widget.gameId});
+        await _rt?.broadcastEvent({'type': 'locked'});
+        await _loadQuestion();
+      } catch (_) {
+        // Serveur autoritaire (refus/idempotent) : on garde l'état rechargé.
+        await _loadQuestion();
+      }
+    } finally {
+      _autoLockCheckInFlight = false;
     }
   }
 
