@@ -104,6 +104,61 @@ bool showLockFor({
   return lockDue;
 }
 
+/// Soumission courante (pur, testable) : le serveur détient-il déjà une
+/// réponse pour la question affichée ?
+class SubmissionState {
+  bool hasSavedAnswer = false;
+
+  /// Submit réussi (ou ligne serveur restaurée) : l'état affiché est sauvé.
+  void markSubmitted() => hasSavedAnswer = true;
+
+  /// Frappe locale après sauvegarde : modifiée, resoumettable.
+  void markEdited() => hasSavedAnswer = false;
+
+  /// Nouvelle question : rien de sauvé pour elle.
+  void resetForNewQuestion() => hasSavedAnswer = false;
+}
+
+/// Texte serveur à installer après un chargement autoritaire (pur) :
+/// la ligne de la question courante, sinon null (ne jamais installer
+/// le texte d'une autre question ni inventer une réponse).
+String? restoredAnswerText({
+  required Map<String, dynamic>? row,
+  required int currentPosition,
+}) {
+  if (row == null) return null;
+  if ((row['question_idx'] as int?) != currentPosition) return null;
+  final text = row['answer_text'] as String?;
+  if (text == null || text.isEmpty) return null;
+  return text;
+}
+
+/// Garde anti-périmé des chargements de réponse (pure, testable) : même
+/// discipline d'identité que WagerLoadGuard (jeu + joueur + position +
+/// opened_at). Une réponse Q3 arrivée après l'ouverture Q4 est jetée.
+class AnswerLoadGuard {
+  String? _pending;
+
+  static String identity({
+    required String gameId,
+    required String playerId,
+    required int position,
+    required String? openedAt,
+  }) =>
+      '$gameId|$playerId|$position|${openedAt ?? ''}';
+
+  void beginLoad(String id) {
+    _pending = id;
+  }
+
+  bool finishLoad(String id, {required String currentId}) =>
+      id == _pending && id == currentId;
+
+  void reset() {
+    _pending = null;
+  }
+}
+
 /// État des mises résolu depuis les lignes wagers (pur, testable).
 /// Priorité STRICTE (chargement autoritaire) :
 /// 1. mise sauvegardée de la question courante (restauration serveur) ;
@@ -259,6 +314,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
   Set<int> _prevUsedWagers = {};
   final _wagerGuard = WagerLoadGuard();
   bool get _wagersReady => _wagerGuard.ready;
+  final _answerGuard = AnswerLoadGuard();
+  final _submission = SubmissionState();
   int _remainingSec = 0;
   int _presenceCount = 0;
   int _lastPosition = -1;
@@ -315,6 +372,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       await _loadLobbyMeta();
       await _loadMembers();
       await _loadOwnWagers();
+      await _loadOwnAnswer();
       final rt = GameRealtime(widget.gameId);
       _rt = rt;
       rt.subscribeChanges(
@@ -376,6 +434,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     await _clock.calibrate();
     await _reloadFromServer();
     await _loadOwnWagers();
+    await _loadOwnAnswer();
     final session = ref.read(lobbyViewModelProvider).value;
     final hb = _heartbeat;
     if (session != null && (hb == null || !hb.isRunning)) {
@@ -409,17 +468,19 @@ class _GameScreenState extends ConsumerState<GameScreen>
       final isNew = _lastPosition != -1 && pos != _lastPosition;
       _installAuthoritativeQuestion(fresh);
       if (isNew && mounted) {
-        // Nouvelle question : purge l'état local de l'ancienne, mise sûre
-        // immédiate (finale jamais à 5) ; le chargement autoritaire suit
-        // (reset ready + garde anti-périmé) et restaure la mise sauvée.
+        // Nouvelle question : purge l'état local de l'ancienne (texte,
+        // soumission, mise sûre immédiate) ; les chargements autoritaires
+        // suivent (mises + réponse, gardes anti-périmé).
         _answerCtrl.clear();
         setState(() {
+          _submission.resetForNewQuestion();
           if (pos == _config.finalQuestionIndex &&
               ![0, 10, 20].contains(_wager)) {
             _wager = 0;
           }
         });
         _loadOwnWagers();
+        _loadOwnAnswer();
       }
       _maybeAutoLock();
       await _syncRevealedAnswer();
@@ -563,6 +624,65 @@ class _GameScreenState extends ConsumerState<GameScreen>
       });
     } catch (_) {
       // Échec : ready reste false, retry au prochain reload/reconnect.
+    }
+  }
+
+  /// Réponse propre du joueur courant pour la question affichée (RLS : sa
+  /// ligne uniquement, jamais celle d'un autre joueur). Appelée sur les
+  /// chargements autoritaires (boot, reconnect, nouvelle question) :
+  /// jamais sur un simple rebuild/tick (la frappe locale vit sa vie).
+  /// Ligne présente → texte installé + soumission marquée sauvée ;
+  /// absente → champ vidé. Garde anti-périmé identique aux mises.
+  Future<void> _loadOwnAnswer() async {
+    if (!mounted) return;
+    final session = ref.read(lobbyViewModelProvider).value;
+    final pid = session?.playerId;
+    if (pid == null || pid.isEmpty) return;
+    final pos = _lastPosition;
+    if (pos < 0) return; // Pas de question : rien à restaurer.
+    final id = AnswerLoadGuard.identity(
+      gameId: widget.gameId,
+      playerId: pid,
+      position: pos,
+      openedAt: _question?['opened_at'] as String?,
+    );
+    _answerGuard.beginLoad(id);
+    try {
+      final row = await supa()
+          .from('player_answers')
+          .select('answer_text,question_idx')
+          .eq('game_id', widget.gameId)
+          .eq('player_id', pid)
+          .eq('question_idx', pos)
+          .limit(1)
+          .maybeSingle();
+      if (!mounted) return;
+      final nowPid =
+          ref.read(lobbyViewModelProvider).value?.playerId ?? '';
+      final currentId = AnswerLoadGuard.identity(
+        gameId: widget.gameId,
+        playerId: nowPid,
+        position: _lastPosition,
+        openedAt: _question?['opened_at'] as String?,
+      );
+      if (!_answerGuard.finishLoad(id, currentId: currentId)) {
+        return; // Périmé : on jette.
+      }
+      final text = restoredAnswerText(
+        row: row == null ? null : Map<String, dynamic>.from(row as Map),
+        currentPosition: _lastPosition,
+      );
+      setState(() {
+        if (text == null) {
+          _answerCtrl.clear();
+          _submission.resetForNewQuestion();
+        } else {
+          if (_answerCtrl.text != text) _answerCtrl.text = text;
+          _submission.markSubmitted();
+        }
+      });
+    } catch (_) {
+      // Réseau : on garde la frappe locale, retry au prochain reload.
     }
   }
 
@@ -725,11 +845,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
         'p_wager': _wager,
       });
       await _loadOwnWagers();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Réponse envoyée')),
-        );
-      }
+      // Indicateur inline (pas de SnackBar bruyant) : contenus conservés,
+      // resoumission possible tant que la question reste ouverte.
+      if (mounted) setState(() => _submission.markSubmitted());
     } catch (e) {
       _snack(e);
     }
@@ -878,6 +996,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
           TextField(
             controller: _answerCtrl,
             enabled: answering,
+            onChanged: (_) {
+              // Frappe après sauvegarde : modifiée localement, resoumettable.
+              if (_submission.hasSavedAnswer && mounted) {
+                setState(() => _submission.markEdited());
+              }
+            },
             decoration: const InputDecoration(
               labelText: 'Ta réponse',
               border: OutlineInputBorder(),
@@ -909,6 +1033,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
             onPressed: submittable ? _submit : null,
             child: const Text('Valider (réponse + mise)'),
           ),
+          if (_submission.hasSavedAnswer && answering)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text('Réponse enregistrée'),
+            ),
           const Divider(height: 32),
           // Lock piloté par le statut (+ seuil local pour les non-hôtes) ;
           // le reste est strictement piloté par le statut (serveur requis).

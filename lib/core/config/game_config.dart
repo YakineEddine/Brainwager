@@ -50,14 +50,36 @@ class GameConfig {
   GameConfig copyWith({
     int? totalQuestions,
     int? finalQuestionIndex,
-    TeamScoringMode? teamScoring,
+    List<int>? normalWagers,
+    List<int>? finalWagers,
     int? defaultDurationSec,
+    int? lockGraceSec,
+    int? hostTimeoutSec,
+    int? minPlayers,
+    int? maxPlayers,
+    bool? allowNegativeFinal,
+    int? joinCodeLength,
+    int? serverOffsetSamples,
+    int? packPreviewCount,
+    TeamScoringMode? teamScoring,
+    FuzzyThresholds? fuzzy,
   }) {
     return GameConfig(
       totalQuestions: totalQuestions ?? this.totalQuestions,
       finalQuestionIndex: finalQuestionIndex ?? this.finalQuestionIndex,
-      teamScoring: teamScoring ?? this.teamScoring,
+      normalWagers: normalWagers ?? this.normalWagers,
+      finalWagers: finalWagers ?? this.finalWagers,
       defaultDurationSec: defaultDurationSec ?? this.defaultDurationSec,
+      lockGraceSec: lockGraceSec ?? this.lockGraceSec,
+      hostTimeoutSec: hostTimeoutSec ?? this.hostTimeoutSec,
+      minPlayers: minPlayers ?? this.minPlayers,
+      maxPlayers: maxPlayers ?? this.maxPlayers,
+      allowNegativeFinal: allowNegativeFinal ?? this.allowNegativeFinal,
+      joinCodeLength: joinCodeLength ?? this.joinCodeLength,
+      serverOffsetSamples: serverOffsetSamples ?? this.serverOffsetSamples,
+      packPreviewCount: packPreviewCount ?? this.packPreviewCount,
+      teamScoring: teamScoring ?? this.teamScoring,
+      fuzzy: fuzzy ?? this.fuzzy,
     );
   }
 }

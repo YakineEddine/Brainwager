@@ -31,6 +31,13 @@ Avant le start, vérifier :
 12. Rejoin avec le même compte déjà membre (même code, pseudo différent
     tapé) : reprise normale de la partie (already_joined), PAS
     `nickname-taken`.
+13. Restauration de soumission :
+    - Q1 ouverte, B tape une réponse + mise, valide ;
+    - B rafraîchit le navigateur avant le lock ;
+    - même identité anonyme, même partie/joueur, toujours Q1 ;
+    - champ réponse et mise restaurés à l'identique ;
+    - B modifie et resoumet pendant que Q1 est ouverte ;
+    - une seule ligne answer et une seule mise Q1 existent côté serveur.
 
 Statut : NON EXÉCUTÉ (aucun humain ne l'a encore joué). Ne pas cocher sans
 un vrai run à deux appareils.
