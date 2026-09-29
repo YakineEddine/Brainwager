@@ -139,12 +139,12 @@ packs 1──* pack_reports               profiles 1──* entitlements
 | Fonction | Rôle | Vérifications serveur |
 |---|---|---|
 | `server_time()` | `now()` pour offset | aucune |
-| `create_game(p_pack_id, p_team_mode, p_language)` | game + code + tirage `game_questions` + player hôte | pack visible / entitlement premium OK, remplit 11 lignes sans doublon |
-| `join_game(p_code, p_nickname, p_team_id?)` | ajoute player | statut `lobby`, pseudo unique + filtre, team existe |
+| `create_game(p_pack_id, p_team_mode, p_language)` | game + code + tirage `game_questions` + player hôte | pack visible / entitlement premium OK, pseudo validé serveur, code alloué sans course, finale tirée au hasard parmi les plus difficiles, 10 normales au hasard parmi le reste |
+| `join_game(p_code, p_nickname, p_team_id?)` | ajoute player (reprise idempotente si déjà membre) | statut `lobby` pour les nouveaux, pseudo unique + filtre **serveur** (pas client-only), team existe, plafond 50 |
 | `start_game()` / `open_question(p_idx)` | statut + `question_opened_at = now()` | hôte uniquement |
 | `get_current_question(p_game)` | retourne position, prompt dans `games.language`, image, `match_mode`, `duration`, `opened_at` — sans réponses | membre uniquement ; question courante seulement |
 | `get_pack_preview(p_pack)` | 3 exemples d'un pack officiel | respecte `is_hidden` ; jamais la liste complète |
-| `submit_answer(p_game, p_idx, p_text, p_wager)` | upsert answer + wager | statut open, timer OK, wager valide (contraintes tranchent) |
+| `submit_answer(p_game, p_idx, p_text, p_wager)` | upsert answer + wager | statut open, timer OK, wager valide ; `wager-already-used` émis uniquement pour l'index unique normal (montants 1..10) |
 | `lock_question(p_game)` | `open → locked` + correction auto, idempotente | hôte **ou tout membre si `now() >= opened_at + duration − 2 s`** ; rejouée sans effet |
 | `reveal_answer(p_game)` | retourne réponse + transition `locked → reveal/final_reveal` | transition réservée à l'hôte ; lecture ensuite ouverte aux membres ; sinon exception |
 | `show_leaderboard(p_game)` | `reveal → leaderboard` (questions normales), idempotente | hôte uniquement ; `position < 10` |

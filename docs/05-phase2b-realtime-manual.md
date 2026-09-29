@@ -38,6 +38,7 @@ Avant le start, vérifier :
     - champ réponse et mise restaurés à l'identique ;
     - B modifie et resoumet pendant que Q1 est ouverte ;
     - une seule ligne answer et une seule mise Q1 existent côté serveur.
+    (PASSÉ le 2026-09-29 : scénario rejoué manuellement.)
 
-Statut : NON EXÉCUTÉ (aucun humain ne l'a encore joué). Ne pas cocher sans
-un vrai run à deux appareils.
+Statut : NON EXÉCUTÉ pour tout le reste (aucun humain ne l'a encore joué).
+Ne pas cocher sans un vrai run à deux appareils.

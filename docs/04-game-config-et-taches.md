@@ -35,6 +35,10 @@ Tout écart en test passe par `copyWith`, jamais en dur dans l'UI.
 Fonction pure de sélection (Phase 1, `question_selector.dart`) :
 `selectGameQuestions(pool, {finalCount = 1})` → 10 normales + 1 finale,
 sans doublon, finale parmi les plus difficiles (`difficulty` max du pack).
+Côté serveur déployé (migration 0010), le tirage est en plus VRAIMENT
+aléatoire : finale au hasard parmi les plus difficiles, 10 normales au
+hasard parmi le reste (code alloué sans course). Le miroir Dart reste la
+référence de test des règles (unicité, pool insuffisante → erreur explicite).
 Testée en unitaire (unicité, taille pool insuffisante → erreur explicite,
 finale bien de difficulté max).
 
