@@ -57,6 +57,78 @@ bool startEnabledFor({required int memberCount, required int minPlayers}) =>
 bool canSubmitAnswer({required String status, required bool wagersReady}) =>
     canAnswerIn(status) && wagersReady;
 
+/// Bouton Valider : comme ci-dessus, plus jamais pendant un submit en cours
+/// (un second clic ne doit pas démarrer une seconde requête).
+bool isSubmitAllowed({
+  required String status,
+  required bool wagersReady,
+  required bool submitInFlight,
+}) =>
+    canSubmitAnswer(status: status, wagersReady: wagersReady) &&
+    !submitInFlight;
+
+/// Snapshot exact capturé au démarrage d'un submit (pur) : identité question
+/// (jeu + joueur + position + opened_at) + texte + mise soumis. La décision
+/// "sauvé" se prend contre ce snapshot, jamais contre l'état UI mutable
+/// post-await (frappe ou changement de question entre-temps).
+class SubmissionSnapshot {
+  final String gameId;
+  final String playerId;
+  final int position;
+  final String? openedAt;
+  final String answerText;
+  final int wager;
+  const SubmissionSnapshot({
+    required this.gameId,
+    required this.playerId,
+    required this.position,
+    required this.openedAt,
+    required this.answerText,
+    required this.wager,
+  });
+
+  /// Vrai si l'état actuel correspond encore exactement au snapshot.
+  bool matchesCurrent({
+    required String gameId,
+    required String playerId,
+    required int position,
+    required String? openedAt,
+    required String answerText,
+    required int wager,
+  }) {
+    return gameId == this.gameId &&
+        playerId == this.playerId &&
+        position == this.position &&
+        (openedAt ?? '') == (this.openedAt ?? '') &&
+        answerText == this.answerText &&
+        wager == this.wager;
+  }
+}
+
+/// Décision post-submit (pure) : marquer sauvé SSI la requête a réussi ET
+/// l'état actuel correspond encore au snapshot soumis. Sinon la frappe
+/// locale plus récente est conservée telle quelle (dirty).
+bool shouldMarkSubmitted({
+  required bool succeeded,
+  required SubmissionSnapshot snapshot,
+  required String gameId,
+  required String playerId,
+  required int position,
+  required String? openedAt,
+  required String answerText,
+  required int wager,
+}) {
+  if (!succeeded) return false;
+  return snapshot.matchesCurrent(
+    gameId: gameId,
+    playerId: playerId,
+    position: position,
+    openedAt: openedAt,
+    answerText: answerText,
+    wager: wager,
+  );
+}
+
 /// Garde de fraîcheur des mises (pure, testable) : un chargement démarré
 /// pour une identité question (jeu + joueur + position + opened_at) ne peut
 /// valider que cette identité. Boot/resume/reconnect/nouvelle question →
@@ -316,6 +388,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   bool get _wagersReady => _wagerGuard.ready;
   final _answerGuard = AnswerLoadGuard();
   final _submission = SubmissionState();
+  bool _submitInFlight = false;
   int _remainingSec = 0;
   int _presenceCount = 0;
   int _lastPosition = -1;
@@ -836,20 +909,51 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   Future<void> _submit() async {
     final q = _question;
-    if (q == null || !_wagersReady) return;
+    if (q == null || !_wagersReady || _submitInFlight) return;
+    // Snapshot exact : tout le verdict post-await se joue contre lui,
+    // jamais contre l'état UI mutable (frappe ou Q suivante entre-temps).
+    final snap = SubmissionSnapshot(
+      gameId: widget.gameId,
+      playerId: ref.read(lobbyViewModelProvider).value?.playerId ?? '',
+      position: (q['position'] as int?) ?? 0,
+      openedAt: q['opened_at'] as String?,
+      answerText: _answerCtrl.text,
+      wager: _wager,
+    );
+    setState(() => _submitInFlight = true);
+    var succeeded = false;
     try {
       await supa().rpc('submit_answer', params: {
-        'p_game': widget.gameId,
-        'p_idx': q['position'],
-        'p_text': _answerCtrl.text,
-        'p_wager': _wager,
+        'p_game': snap.gameId,
+        'p_idx': snap.position,
+        'p_text': snap.answerText,
+        'p_wager': snap.wager,
       });
       await _loadOwnWagers();
-      // Indicateur inline (pas de SnackBar bruyant) : contenus conservés,
-      // resoumission possible tant que la question reste ouverte.
-      if (mounted) setState(() => _submission.markSubmitted());
+      succeeded = true;
     } catch (e) {
       _snack(e);
+    } finally {
+      // Toujours réinitialisé, succès comme échec ; jamais de markSaved
+      // sur un état plus récent que le snapshot (frappe ou Q4 entre-temps).
+      if (!mounted) {
+        _submitInFlight = false;
+      } else {
+        final mark = shouldMarkSubmitted(
+          succeeded: succeeded,
+          snapshot: snap,
+          gameId: widget.gameId,
+          playerId: ref.read(lobbyViewModelProvider).value?.playerId ?? '',
+          position: _lastPosition,
+          openedAt: _question?['opened_at'] as String?,
+          answerText: _answerCtrl.text,
+          wager: _wager,
+        );
+        setState(() {
+          _submitInFlight = false;
+          if (mark) _submission.markSubmitted();
+        });
+      }
     }
   }
 
@@ -969,10 +1073,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final pos = (q?['position'] as int?) ?? 0;
     final isFinal = pos == _config.finalQuestionIndex;
     final answering = canAnswerIn(_status);
-    final submittable = canSubmitAnswer(
-      status: _status,
-      wagersReady: _wagersReady,
-    );
     final lockDue = _lockDueLocal();
     final wagers =
         isFinal ? _config.finalWagers : List.generate(10, (i) => i + 1);
@@ -1015,11 +1115,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 ChoiceChip(
                   label: Text('$w'),
                   selected: _wager == w,
+                  // Réponse + mise = une seule soumission : changer de mise
+                  // après sauvegarde rend l'état dirty (resoumission requise).
                   onSelected: !answering ||
                           !_wagersReady ||
+                          _submitInFlight ||
                           (!isFinal && _prevUsedWagers.contains(w))
                       ? null
-                      : (_) => setState(() => _wager = w),
+                      : (_) => setState(() {
+                            _wager = w;
+                            _submission.markEdited();
+                          }),
                 ),
             ],
           ),
@@ -1030,7 +1136,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
             ),
           const SizedBox(height: 12),
           ElevatedButton(
-            onPressed: submittable ? _submit : null,
+            onPressed: isSubmitAllowed(
+              status: _status,
+              wagersReady: _wagersReady,
+              submitInFlight: _submitInFlight,
+            )
+                ? _submit
+                : null,
             child: const Text('Valider (réponse + mise)'),
           ),
           if (_submission.hasSavedAnswer && answering)
