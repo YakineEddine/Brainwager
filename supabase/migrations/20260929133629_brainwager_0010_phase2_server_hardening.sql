@@ -1,3 +1,4 @@
+
 -- Brainwager 0010 — final Phase 2 server hardening.
 -- No table/data changes. Keeps public RPC signatures stable.
 
@@ -108,6 +109,9 @@ begin
 
   perform public._ensure_profile();
 
+  -- Allocate the code by attempting the insert itself. A concurrent creator
+  -- can no longer win between a pre-check and the INSERT.
+
   loop
     v_code := public._gen_code(5);
 
@@ -146,6 +150,10 @@ begin
   values (v_game, auth.uid(), v_n, true)
   returning id into v_player;
 
+  -- Highest difficulty wins; random() only breaks ties at that difficulty.
+  -- NULL difficulty is last, so a malformed pool still cannot outrank a
+  -- properly classified question.
+
   select q.id
   into v_finale
   from public.questions q
@@ -156,6 +164,8 @@ begin
   if v_finale is null then
     raise exception 'pack-too-small';
   end if;
+
+  -- Pick and order ten distinct normal questions randomly from the remainder.
 
   select array_agg(s.id order by s.rnd)
   into v_normals
@@ -187,6 +197,9 @@ begin
   );
 end;
 $$;
+
+-- join_game keeps 0009 idempotent reconnect semantics but enforces nickname
+-- policy on the server as well and refreshes presence on the rare user-id race.
 
 create or replace function public.join_game(
   p_code text,
@@ -324,6 +337,9 @@ begin
 end;
 $$;
 
+-- submit_answer maps only the intentional partial unique wager index to the
+-- friendly wager-already-used error. Any unrelated integrity failure is kept.
+
 create or replace function public.submit_answer(
   p_game uuid,
   p_idx integer,
@@ -438,6 +454,9 @@ begin
   end;
 end;
 $$;
+
+-- Fail closed: only signed-in Supabase Auth users (including anonymous-auth
+-- users, which use the authenticated Postgres role) can call app RPCs.
 
 revoke all on function public.create_game(uuid, text, boolean, text, integer, text)
 from public, anon, authenticated;
