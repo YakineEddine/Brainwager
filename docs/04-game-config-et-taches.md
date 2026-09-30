@@ -79,6 +79,13 @@ modification/lecture-éditeur UGC sécurisées, lookup partage `PK-XXXX`,
 réponses privées protégées, RPC de signalement, écritures DB directes
 révoquées. UI éditeur client / deep-link / import toujours en attente.
 Phase 3 NON terminée.
+Support backend arabe déployé (migration 0012) : champs schéma/contenu
+(`title_ar`, `prompt_ar`, réponses/alias arabes), langue de partie `ar`,
+normalisation/matching arabe serveur, RPC UGC trilingues, backfill arabe
+DEMO01. Privilèges existants inchangés (aucune lecture directe des réponses,
+aucune écriture directe, RPC authentifiés uniquement).
+UI Flutter arabe / RTL toujours en attente (prochain ticket).
+Phase 3 toujours NON complète (import, report UI, achats, packs prod).
 Progrès Phase 3C éditeur client implémenté sur l'autorité RPC 0011
 (création/édition, CGU, code serveur, migration d'aucune donnée directe).
 Phase 3 toujours NON complète (import, report UI, achats, packs prod).

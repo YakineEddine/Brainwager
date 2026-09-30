@@ -14,7 +14,8 @@ packs 1──* pack_reports               profiles 1──* entitlements
 ```
 
 ### profiles — 1 ligne par user anon (sans aucun flag premium)
-- `id uuid PK → auth.users.id`, `display_name text`, `locale text(2) DEFAULT 'fr'`,
+- `id uuid PK → auth.users.id`, `display_name text`, `locale text DEFAULT 'fr'
+  CHECK IN ('fr','en','ar')` (arabe ajouté migration 0012),
   `created_at timestamptz`.
 - RLS : `SELECT/UPDATE` uniquement `auth.uid() = id`. Aucun listing global.
 - Justification : `is_premium` / `no_ads` modifiables par le client sont une faille.
@@ -34,7 +35,8 @@ packs 1──* pack_reports               profiles 1──* entitlements
 
 ### packs — officiels + UGC (v1 sans image uploadée)
 - `id uuid PK`, `owner_id uuid → profiles (NULL si officiel)`,
-  `title_fr / title_en text NOT NULL`, `desc_fr / desc_en text`,
+  `title_fr / title_en / title_ar text NOT NULL`,
+  `desc_fr / desc_en / desc_ar text`,
   `is_official bool DEFAULT false`, `is_premium bool DEFAULT false`,
   `price_sku text NULL`, `share_code text UNIQUE`,
   `report_count int DEFAULT 0`, `is_hidden bool DEFAULT false`,
@@ -58,7 +60,7 @@ packs 1──* pack_reports               profiles 1──* entitlements
 
 ### questions — énoncés (SANS réponses, lecture restreinte anti-triche)
 - `id uuid PK`, `pack_id uuid → packs ON DELETE CASCADE`,
-  `idx int NOT NULL`, `prompt_fr / prompt_en text NOT NULL`,
+  `idx int NOT NULL`, `prompt_fr / prompt_en / prompt_ar text NOT NULL`,
   `image_url text NULL` (officiels uniquement),
   `category text`, `difficulty smallint CHECK 1..3`,
   `match_mode text CHECK IN ('exact','fuzzy') DEFAULT 'fuzzy'`,
@@ -81,8 +83,9 @@ packs 1──* pack_reports               profiles 1──* entitlements
 
 ### question_answers_private — ★ SENSIBLE
 - `question_id uuid PK → questions ON DELETE CASCADE`,
-  `answer_main_fr / answer_main_en text NOT NULL`,
-  `aliases_fr text[] DEFAULT '{}'`, `aliases_en text[] DEFAULT '{}'`.
+  `answer_main_fr / answer_main_en / answer_main_ar text NOT NULL`,
+  `aliases_fr text[] DEFAULT '{}'`, `aliases_en text[] DEFAULT '{}'`,
+  `aliases_ar text[] DEFAULT '{}'`.
 - RLS : **aucune policy SELECT** pour `anon`/`authenticated`, aucun privilège
   table direct. Accès `service_role` + RPC `security definer` uniquement.
   Le propriétaire éditeur reçoit ses réponses uniquement via
@@ -91,7 +94,9 @@ packs 1──* pack_reports               profiles 1──* entitlements
 ### games — état synchronisé (+ langue)
 - `id uuid PK`, `join_code text UNIQUE NOT NULL` (alphabet sans ambiguïté,
   génération en boucle), `host_id uuid → profiles`, `pack_id uuid → packs`,
-  `language text(2) DEFAULT 'fr' CHECK IN ('fr','en')`,
+  `language text DEFAULT 'fr' CHECK IN ('fr','en','ar')` (arabe : migration
+  0012 ; `create_game(p_language = 'ar')` exige un contenu arabe complet du
+  pack, sinon échec fermé `pack-language-unavailable`),
   `status text CHECK IN ('lobby','question_open','question_locked','reveal',
   'leaderboard','final_wager','final_reveal','finished') DEFAULT 'lobby'`,
   `team_mode bool DEFAULT false`, `current_question_idx int DEFAULT 0`,
@@ -168,7 +173,7 @@ packs 1──* pack_reports               profiles 1──* entitlements
 | `join_game(p_code, p_nickname, p_team_id?)` | ajoute player (reprise idempotente si déjà membre) | statut `lobby` pour les nouveaux, pseudo unique + filtre **serveur** (pas client-only), team existe, plafond 50 |
 | `start_game()` / `open_question(p_idx)` | statut + `question_opened_at = now()` | hôte uniquement |
 | `get_current_question(p_game)` | retourne position, prompt dans `games.language`, image, `match_mode`, `duration`, `opened_at` — sans réponses | membre uniquement ; question courante seulement |
-| `get_pack_preview(p_pack)` | aperçu pack sans réponses | officiel → max 3 énoncés ; UGC du propriétaire → tous les énoncés + métadonnées ; jamais réponses/alias ; pack masqué refusé ; UGC non possédé refusé |
+| `get_pack_preview(p_pack)` | aperçu pack sans réponses | officiel → max 3 énoncés ; UGC du propriétaire → tous les énoncés + métadonnées ; champs arabes inclus partout ; jamais réponses/alias ; pack masqué refusé ; UGC non possédé refusé |
 | `submit_answer(p_game, p_idx, p_text, p_wager)` | upsert answer + wager | statut open, timer OK, wager valide ; `wager-already-used` émis uniquement pour l'index unique normal (montants 1..10) |
 | `lock_question(p_game)` | `open → locked` + correction auto, idempotente | hôte **ou tout membre si `now() >= opened_at + duration − 2 s`** ; rejouée sans effet |
 | `reveal_answer(p_game)` | retourne réponse + transition `locked → reveal/final_reveal` | transition réservée à l'hôte ; lecture ensuite ouverte aux membres ; sinon exception |
@@ -176,10 +181,10 @@ packs 1──* pack_reports               profiles 1──* entitlements
 | `finish_game(p_game)` | `final_reveal → finished` (finale idx 10) | hôte uniquement |
 | `override_answer(p_answer_id, p_correct)` | correction hôte puis `recompute_player_stats(player)` depuis tout l'historique | hôte, partie non `finished` ; recalcule `score`, `best_streak`, `biggest_wager_won` |
 | `transfer_host(p_game, p_new_player?)` | change hôte, idempotent | hôte actuel **ou tout membre si hôte inactif (`last_seen_at < now() − 60 s`)** |
-| `get_pack_by_share_code(code)` | lecture pack partagé + aperçu par code | officiel → max 3 exemples ; UGC partagé → tous les énoncés + métadonnées, jamais réponses/alias ; respecte `is_hidden` ; `is_owned` + `question_count` inclus |
-| `create_ugc_pack(...)` | crée pack UGC + questions + réponses privées, atomique | CGU obligatoires (`terms-required`), titres/desc bornés, code `PK-XXXX` sans course, 11..100 questions validées, retour `{id, share_code}` |
-| `update_ugc_pack(...)` | réécrit un pack UGC (titres + remplacement atomique) | owner non-officiel uniquement ; `pack-in-use` tant qu'UNE partie référence le pack |
-| `get_ugc_pack_for_edit(...)` | pack UGC complet pour l'éditeur (seule voie vers ses réponses) | owner uniquement ; inclut réponses + alias |
+| `get_pack_by_share_code(code)` | lecture pack partagé + aperçu par code | officiel → max 3 exemples ; UGC partagé → tous les énoncés + métadonnées (champs arabes inclus), jamais réponses/alias ; respecte `is_hidden` ; `is_owned` + `question_count` inclus |
+| `create_ugc_pack(...)` | crée pack UGC + questions + réponses privées, atomique | CGU obligatoires (`terms-required`), titres/desc bornés, code `PK-XXXX` sans course, 11..100 questions validées, retour `{id, share_code}` ; surcharge trilingue (migration 0012) : `p_title_ar`, `p_desc_ar`, questions avec `prompt_ar` / `answer_main_ar` / `aliases_ar`, contenu arabe valide exigé (anciennes surcharges FR/EN conservées pour compatibilité) |
+| `update_ugc_pack(...)` | réécrit un pack UGC (titres + remplacement atomique) | owner non-officiel uniquement ; `pack-in-use` tant qu'UNE partie référence le pack ; surcharge trilingue : métadonnées arabes ; un vieux client ne peut pas effacer l'arabe d'un pack arabisé (`arabic-content-required`) ; paire `prompt_ar`/`answer_main_ar` incohérente → `invalid-arabic-content` |
+| `get_ugc_pack_for_edit(...)` | pack UGC complet pour l'éditeur (seule voie vers ses réponses) | owner uniquement ; inclut réponses + alias, champs arabes inclus |
 | `report_pack(...)` | signale un pack | raison 3..500, pas d'auto-signalement, `report_count` incrémenté au premier signalement seulement (doublon = motif mis à jour) ; aucun masquage automatique |
 | `cleanup_old_games()` | delete `expires_at < now() − 7 j` | pg_cron 1×/jour |
 
@@ -203,11 +208,19 @@ Mode `restore` : revalide et réactive.
 ## 4. Correction auto (miroir Dart ↔ SQL, avec match_mode)
 
 Normalisation : minuscules, accents, ponctuation, articles initiaux, espaces, trim.
+Arabe (serveur, migration 0012) : lettres arabes préservées, harakat retirés,
+tatweel supprimé, variantes d'Alef normalisées, comportement final
+Alef Maqsura/Ya selon SQL, chiffres arabo-indiens/persans vers ASCII,
+séparateurs décimaux/milliers arabes normalisés, article défini ال normalisé ;
+comportement FR/EN inchangé.
 Si valeur numérique/année → `exact` forcé. Si `match_mode = exact` → égalité
 normalisée (ou alias) uniquement, **aucune** tolérance Levenshtein.
 Si `fuzzy` → égalité OU `levenshtein ≤ seuil` (1 si len ≤ 5, 2 si len ≤ 8, sinon 3).
 Cas imposés refusés en exact : `Iran` vs `Irak`, `1984` vs `1985`
 (tests Dart + SQL Phase 2, jeu de 50 paires FR/EN).
+
+Pack démo DEMO01 : titre/description arabes + 11 énoncés arabes + 11 réponses
+privées/alias arabes (migration 0012, backfill).
 
 ## 5. Nettoyage plan gratuit
 
