@@ -74,6 +74,11 @@ Test : créer pack → share code → import sur 2ᵉ appareil.
 Progrès Phase 3A (catalogue/détail/sélection implémentés, anti-triche via
 `get_pack_preview`, premium verrouillé sans achat) ; reste Phase 3B+ :
 éditeur, partage, achats, packs de production.
+Progrès Phase 3B backend authority déployé (migration 0011) : création/
+modification/lecture-éditeur UGC sécurisées, lookup partage `PK-XXXX`,
+réponses privées protégées, RPC de signalement, écritures DB directes
+révoquées. UI éditeur client / deep-link / import toujours en attente.
+Phase 3 NON terminée.
 
 ### Phase 4 — Équipes, TV, correction manuelle, podium
 Livrables : `team_mode` avec scoring somme/moyenne (moyenne défaut),

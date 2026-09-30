@@ -38,13 +38,21 @@ packs 1──* pack_reports               profiles 1──* entitlements
   `is_official bool DEFAULT false`, `is_premium bool DEFAULT false`,
   `price_sku text NULL`, `share_code text UNIQUE (6 chars)`,
   `report_count int DEFAULT 0`, `is_hidden bool DEFAULT false`,
+  `ugc_terms_accepted_at timestamptz NULL` (CGU UGC, horodatée serveur),
   `created_at`.
 - RLS : lecture liste si `is_official AND NOT is_hidden` OU `owner_id = auth.uid()`.
-  Partage par code uniquement via RPC `get_pack_by_share_code`.
-  `INSERT` authentifié, `UPDATE/DELETE` owner. CGU acceptées obligatoires à la création.
-- UGC v1 : aucun upload d'image. `questions.image_url` reste `NULL` pour tout pack
-  non officiel (contrainte en RPC d'édition). Signalement via `pack_reports` +
-  blocage (`is_hidden` après seuil) + CGU.
+  Partage par code via RPC `get_pack_by_share_code` (détail §2).
+  **Écritures directes interdites** : aucune policy INSERT/UPDATE/DELETE pour
+  `authenticated`, aucun droit table (migration 0011). Tout passe par les RPC
+  `create_ugc_pack` / `update_ugc_pack` (CGU acceptées obligatoires).
+- Invariants UGC (contraintes CHECK, officiels exemptés) : toujours
+  non-officiel ET non-premium (`price_sku` NULL) ; code `PK-XXXX`
+  (`^PK-[A-Z0-9]{4}$`) ; CGU acceptées (`ugc_terms_accepted_at NOT NULL`).
+- UGC v1 : aucun upload d'image (`ugc-image-forbidden` côté serveur).
+  Signalement via RPC `report_pack` (raison 3..500, pas d'auto-signalement,
+  `report_count` incrémenté au premier signalement uniquement ; doublon =
+  mise à jour du motif sans incrément). Aucun seuil automatique de
+  masquage `is_hidden` pour l'instant (modération manuelle).
 
 ### questions — énoncés (SANS réponses, lecture restreinte anti-triche)
 - `id uuid PK`, `pack_id uuid → packs ON DELETE CASCADE`,
@@ -53,11 +61,18 @@ packs 1──* pack_reports               profiles 1──* entitlements
   `category text`, `difficulty smallint CHECK 1..3`,
   `match_mode text CHECK IN ('exact','fuzzy') DEFAULT 'fuzzy'`,
   `UNIQUE(pack_id, idx)`.
-- RLS : `SELECT` direct uniquement si `packs.owner_id = auth.uid()` (édition de
-  son propre pack). **Aucune lecture directe des questions d'un pack officiel
+- RLS : `SELECT` direct restant pour l'éditeur de son propre pack
+  (`packs.owner_id = auth.uid()`). **Aucune écriture directe** : INSERT/
+  UPDATE/DELETE retirés (policies + droits, migration 0011). L'éditeur écrit
+  transactionnellement via `create_ugc_pack` / `update_ugc_pack`
+  (remplacement atomique validé : 11..100 questions, prompts 2..500,
+  réponses 1..200, catégories ≤ 40, difficulté 1..3, alias ≤ 20 de ≤ 100
+  caractères, nombres/années forcés `exact`).
+  **Aucune lecture directe des questions d'un pack officiel
   ni des questions d'une partie en cours.** Consultation via :
   - `get_pack_preview(pack_id)` → 3 exemples d'un pack officiel (fiche pack limitée) ;
   - `get_current_question(game_id)` → question courante de la partie (voir §2).
+  UGC v1 : `image_url` toujours NULL (rejet `ugc-image-forbidden`).
 - Règle matching : `match_mode` par question. Nombres et années
   (regex `^-?\d+([.,]\d+)?$`, années 4 chiffres) imposent `exact` même si
   `match_mode = fuzzy` (vérifié en RPC et en Dart).
@@ -66,8 +81,10 @@ packs 1──* pack_reports               profiles 1──* entitlements
 - `question_id uuid PK → questions ON DELETE CASCADE`,
   `answer_main_fr / answer_main_en text NOT NULL`,
   `aliases_fr text[] DEFAULT '{}'`, `aliases_en text[] DEFAULT '{}'`.
-- RLS : **aucune policy SELECT** pour `anon`/`authenticated`. Accès `service_role`
-  + RPC `security definer` uniquement.
+- RLS : **aucune policy SELECT** pour `anon`/`authenticated`, aucun privilège
+  table direct. Accès `service_role` + RPC `security definer` uniquement.
+  Le propriétaire éditeur reçoit ses réponses uniquement via
+  `get_ugc_pack_for_edit` (jamais en lecture directe).
 
 ### games — état synchronisé (+ langue)
 - `id uuid PK`, `join_code text UNIQUE NOT NULL` (alphabet sans ambiguïté,
@@ -151,7 +168,11 @@ packs 1──* pack_reports               profiles 1──* entitlements
 | `finish_game(p_game)` | `final_reveal → finished` (finale idx 10) | hôte uniquement |
 | `override_answer(p_answer_id, p_correct)` | correction hôte puis `recompute_player_stats(player)` depuis tout l'historique | hôte, partie non `finished` ; recalcule `score`, `best_streak`, `biggest_wager_won` |
 | `transfer_host(p_game, p_new_player?)` | change hôte, idempotent | hôte actuel **ou tout membre si hôte inactif (`last_seen_at < now() − 60 s`)** |
-| `get_pack_by_share_code(code)` | lecture pack partagé | respecte `is_hidden` |
+| `get_pack_by_share_code(code)` | lecture pack partagé + aperçu par code | officiel → max 3 exemples ; UGC partagé → tous les énoncés + métadonnées, jamais réponses/alias ; respecte `is_hidden` ; `is_owned` + `question_count` inclus |
+| `create_ugc_pack(...)` | crée pack UGC + questions + réponses privées, atomique | CGU obligatoires (`terms-required`), titres/desc bornés, code `PK-XXXX` sans course, 11..100 questions validées, retour `{id, share_code}` |
+| `update_ugc_pack(...)` | réécrit un pack UGC (titres + remplacement atomique) | owner non-officiel uniquement ; `pack-in-use` tant qu'UNE partie référence le pack |
+| `get_ugc_pack_for_edit(...)` | pack UGC complet pour l'éditeur (seule voie vers ses réponses) | owner uniquement ; inclut réponses + alias |
+| `report_pack(...)` | signale un pack | raison 3..500, pas d'auto-signalement, `report_count` incrémenté au premier signalement seulement (doublon = motif mis à jour) ; aucun masquage automatique |
 | `cleanup_old_games()` | delete `expires_at < now() − 7 j` | pg_cron 1×/jour |
 
 Toutes : `SECURITY DEFINER`, `SET search_path = public`, `REVOKE` public + `GRANT`
