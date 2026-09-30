@@ -5,11 +5,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/utils/game_errors.dart';
 import '../../l10n/app_localizations.dart';
 import 'pack_providers.dart';
 import 'ugc_draft.dart';
 import 'ugc_repository.dart';
+
+/// Route d'édition pour un pack existant (l'URL devient l'autorité :
+/// refresh rouvre l'éditeur, jamais un formulaire création vierge).
+String editRouteFor(String packId) => '/packs/edit/$packId';
+
+/// Identité d'édition effective : id de route, sinon id tout juste créé.
+/// Le second save après création utilise UPDATE vers cet id (jamais re-CREATE).
+String? resolveEditTarget({String? packId, String? createdId}) =>
+    createdId ?? packId;
+
+/// Vrai dès qu'une identité pack existe (édition en cours ou création
+/// réussie) : le save part en UPDATE.
+bool shouldUpdate({String? packId, String? createdId}) =>
+    resolveEditTarget(packId: packId, createdId: createdId) != null;
+
+/// Gel des mutations pendant la sauvegarde (pur, testé) : champs, listes,
+/// dropdowns, cases et boutons de mutation suivent tous `enabled = !saving`.
+/// Le défilement reste libre ; aucune valeur ne peut changer, donc le draft
+/// affiché au succès est exactement le draft soumis.
+bool mutationEnabled({required bool saving}) => !saving;
+
+/// Indicateur "Enregistré" (pur) : toute édition locale le fait tomber,
+/// pour chaque champ/liste (titre, descriptions, questions, réponses,
+/// alias, catégorie, difficulté, match mode, ajout/retrait/déplacement).
+class EditorSavedFlag {
+  bool saved = false;
+
+  void markSaved() => saved = true;
+
+  void markDirty() => saved = false;
+}
 
 /// Contrôleurs d'une question du formulaire (11..100).
 class _QuestionForm {
@@ -84,13 +116,20 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
   bool _termsAccepted = false;
   bool _loading = false;
   bool _saving = false;
-  bool _saved = false;
+  final _savedFlag = EditorSavedFlag();
+  bool get _saved => _savedFlag.saved;
+  String? _createdId;
   String? _loadError;
   String? _saveError;
   List<String> _validationErrors = [];
   String? _shareCode;
 
-  bool get _isCreate => widget.packId == null;
+  bool get _isCreate => widget.packId == null && _createdId == null;
+
+  /// Toute édition locale fait tomber l'indicateur "Enregistré".
+  void _markDirty() {
+    if (_savedFlag.saved) setState(() => _savedFlag.markDirty());
+  }
 
   @override
   void initState() {
@@ -159,6 +198,7 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
   Future<void> _save() async {
     if (_saving) return;
     final lang = Localizations.localeOf(context).languageCode;
+    final l10n = AppLocalizations.of(context)!;
     final draft = _collectDraft();
     final errors = validateUgcPack(draft);
     if (errors.isNotEmpty ||
@@ -169,7 +209,7 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
           if (_isCreate && !_termsAccepted) 'terms-required',
         ];
         _saveError = null;
-        _saved = false;
+        _savedFlag.markDirty();
       });
       return;
     }
@@ -177,22 +217,43 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
       _saving = true;
       _validationErrors = [];
       _saveError = null;
-      _saved = false;
+      _savedFlag.markDirty();
     });
     try {
       final repo = UgcPackRepository();
+      // Après création, l'id retourné devient l'identité d'édition :
+      // tout save suivant est un UPDATE (jamais re-CREATE).
+      final targetId =
+          resolveEditTarget(packId: widget.packId, createdId: _createdId);
       final UgcSaveResult res;
-      if (_isCreate) {
-        res = await repo.createPack(draft, acceptTerms: true);
+      if (shouldUpdate(packId: widget.packId, createdId: _createdId) &&
+          targetId != null) {
+        res = await repo.updatePack(targetId, draft);
       } else {
-        res = await repo.updatePack(widget.packId!, draft);
+        res = await repo.createPack(draft, acceptTerms: true);
       }
       ref.invalidate(packCatalogProvider);
-      if (!_isCreate) ref.invalidate(packPreviewProvider(widget.packId!));
+      if (targetId != null) ref.invalidate(packPreviewProvider(targetId));
       if (!mounted) return;
+      if (widget.packId == null) {
+        // Création réussie : l'URL devient l'autorité (refresh rouvre
+        // l'éditeur existant). Confirmation via SnackBar, l'état inline
+        // ne survivrait pas au remplacement de route.
+        final createdId = res.id;
+        setState(() {
+          _saving = false;
+          _createdId = createdId;
+          _shareCode = res.shareCode;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.editorSaved)),
+        );
+        context.replace(editRouteFor(createdId));
+        return;
+      }
       setState(() {
         _saving = false;
-        _saved = true;
+        _savedFlag.markSaved();
         _shareCode = res.shareCode;
       });
     } catch (e) {
@@ -214,23 +275,27 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
   }
 
   void _addQuestion() {
-    if (_forms.length >= 100) return;
-    setState(() => _forms = [..._forms, _QuestionForm()]);
+    if (_saving || _forms.length >= 100) return;
+    setState(() {
+      _forms = [..._forms, _QuestionForm()];
+      _savedFlag.markDirty();
+    });
   }
 
   void _removeQuestion(int index) {
-    if (_forms.length <= 11) return;
+    if (_saving || _forms.length <= 11) return;
     setState(() {
       final next = [..._forms];
       final removed = next.removeAt(index);
       removed.dispose();
       _forms = next;
-      _saved = false;
+      _savedFlag.markDirty();
     });
   }
 
   void _moveQuestion(int from, int to) {
-    if (from < 0 ||
+    if (_saving ||
+        from < 0 ||
         from >= _forms.length ||
         to < 0 ||
         to >= _forms.length ||
@@ -242,7 +307,7 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
       final item = next.removeAt(from);
       next.insert(to, item);
       _forms = next;
-      _saved = false;
+      _savedFlag.markDirty();
     });
   }
 
@@ -275,18 +340,26 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
                   children: [
                     TextField(
                       controller: _titleFr,
+                      enabled: mutationEnabled(saving: _saving),
+                      onChanged: (_) => _markDirty(),
                       decoration: InputDecoration(labelText: l10n.editorTitleFr),
                     ),
                     TextField(
                       controller: _titleEn,
+                      enabled: mutationEnabled(saving: _saving),
+                      onChanged: (_) => _markDirty(),
                       decoration: InputDecoration(labelText: l10n.editorTitleEn),
                     ),
                     TextField(
                       controller: _descFr,
+                      enabled: mutationEnabled(saving: _saving),
+                      onChanged: (_) => _markDirty(),
                       decoration: InputDecoration(labelText: l10n.editorDescFr),
                     ),
                     TextField(
                       controller: _descEn,
+                      enabled: mutationEnabled(saving: _saving),
+                      onChanged: (_) => _markDirty(),
                       decoration: InputDecoration(labelText: l10n.editorDescEn),
                     ),
                     const SizedBox(height: 16),
@@ -299,20 +372,24 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
                         index: i,
                         total: _forms.length,
                         form: _forms[i],
+                        enabled: mutationEnabled(saving: _saving),
                         onRemove: () => _removeQuestion(i),
-                        onMoveUp:
-                            i > 0 ? () => _moveQuestion(i, i - 1) : null,
-                        onMoveDown: i + 1 < _forms.length
+                        onMoveUp: i > 0 &&
+                                mutationEnabled(saving: _saving)
+                            ? () => _moveQuestion(i, i - 1)
+                            : null,
+                        onMoveDown: i + 1 < _forms.length &&
+                                mutationEnabled(saving: _saving)
                             ? () => _moveQuestion(i, i + 1)
                             : null,
-                        onChanged: () {
-                          if (_saved) setState(() => _saved = false);
-                        },
+                        onChanged: _markDirty,
                       ),
                     const SizedBox(height: 8),
                     OutlinedButton(
-                      onPressed:
-                          _forms.length >= 100 ? null : _addQuestion,
+                      onPressed: !mutationEnabled(saving: _saving) ||
+                              _forms.length >= 100
+                          ? null
+                          : _addQuestion,
                       child: Text(l10n.editorAddQuestion),
                     ),
                     if (_shareCode != null && _shareCode!.isNotEmpty) ...[
@@ -327,8 +404,13 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
                       const SizedBox(height: 8),
                       CheckboxListTile(
                         value: _termsAccepted,
-                        onChanged: (v) =>
-                            setState(() => _termsAccepted = v ?? false),
+                        onChanged: mutationEnabled(saving: _saving)
+                            ? (v) {
+                                setState(
+                                    () => _termsAccepted = v ?? false);
+                                _markDirty();
+                              }
+                            : null,
                         title: Text(l10n.editorTerms),
                         controlAffinity: ListTileControlAffinity.leading,
                       ),
@@ -370,6 +452,7 @@ class _QuestionCard extends StatefulWidget {
   final int index;
   final int total;
   final _QuestionForm form;
+  final bool enabled;
   final VoidCallback onRemove;
   final VoidCallback? onMoveUp;
   final VoidCallback? onMoveDown;
@@ -378,6 +461,7 @@ class _QuestionCard extends StatefulWidget {
     required this.index,
     required this.total,
     required this.form,
+    required this.enabled,
     required this.onRemove,
     required this.onMoveUp,
     required this.onMoveDown,
@@ -398,12 +482,18 @@ class _QuestionCardState extends State<_QuestionCard> {
     final numeric = isNumericAnswer(f.answerFr.text) ||
         isNumericAnswer(f.answerEn.text);
     Widget field(TextEditingController c, String label,
-        {int lines = 1}) {
+        {int lines = 1, bool liveNumeric = false}) {
       return TextField(
         controller: c,
         maxLines: lines,
+        enabled: widget.enabled,
         decoration: InputDecoration(labelText: label),
-        onChanged: (_) => widget.onChanged(),
+        onChanged: (_) {
+          widget.onChanged();
+          // Recalcul immédiat du mode (note exact + Fuzzy indisponible),
+          // même si le parent est déjà dirty (pas de setState parent).
+          if (liveNumeric) setState(() {});
+        },
       );
     }
 
@@ -417,8 +507,8 @@ class _QuestionCardState extends State<_QuestionCard> {
               children: [
                 field(f.promptFr, l10n.editorQuestionFr),
                 field(f.promptEn, l10n.editorQuestionEn),
-                field(f.answerFr, l10n.editorAnswerFr),
-                field(f.answerEn, l10n.editorAnswerEn),
+                field(f.answerFr, l10n.editorAnswerFr, liveNumeric: true),
+                field(f.answerEn, l10n.editorAnswerEn, liveNumeric: true),
                 field(f.aliasesFr, l10n.editorAliasesFr, lines: 2),
                 field(f.aliasesEn, l10n.editorAliasesEn, lines: 2),
                 field(f.category, l10n.editorCategory),
@@ -432,10 +522,12 @@ class _QuestionCardState extends State<_QuestionCard> {
                         DropdownMenuItem(value: 2, child: Text('2')),
                         DropdownMenuItem(value: 3, child: Text('3')),
                       ],
-                      onChanged: (v) => setState(() {
-                        f.difficulty = v ?? 1;
-                        widget.onChanged();
-                      }),
+                      onChanged: widget.enabled
+                          ? (v) => setState(() {
+                                f.difficulty = v ?? 1;
+                                widget.onChanged();
+                              })
+                          : null,
                     ),
                     const SizedBox(width: 16),
                     DropdownButton<String>(
@@ -451,10 +543,12 @@ class _QuestionCardState extends State<_QuestionCard> {
                           child: Text(l10n.editorFuzzy),
                         ),
                       ],
-                      onChanged: (v) => setState(() {
-                        f.matchMode = v ?? 'fuzzy';
-                        widget.onChanged();
-                      }),
+                      onChanged: widget.enabled
+                          ? (v) => setState(() {
+                                f.matchMode = v ?? 'fuzzy';
+                                widget.onChanged();
+                              })
+                          : null,
                     ),
                   ],
                 ),
@@ -473,8 +567,9 @@ class _QuestionCardState extends State<_QuestionCard> {
                     ),
                     const Spacer(),
                     TextButton(
-                      onPressed:
-                          widget.total > 11 ? widget.onRemove : null,
+                      onPressed: widget.enabled && widget.total > 11
+                          ? widget.onRemove
+                          : null,
                       child: Text(l10n.editorRemove),
                     ),
                   ],
