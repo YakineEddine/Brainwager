@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_ar.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_fr.dart';
 
@@ -96,6 +97,7 @@ abstract class AppLocalizations {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('fr'),
     Locale('en'),
+    Locale('ar'),
   ];
 
   /// No description provided for @appTitle.
@@ -427,6 +429,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Questions'**
   String get editorQuestions;
+
+  /// No description provided for @create.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get create;
+
+  /// No description provided for @joinCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Code (4-6)'**
+  String get joinCodeHint;
+
+  /// No description provided for @gameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Game'**
+  String get gameTitle;
+
+  /// No description provided for @waitingForHost.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the host to start…'**
+  String get waitingForHost;
+
+  /// No description provided for @answerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer'**
+  String get answerHint;
+
+  /// No description provided for @submitAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit (answer + wager)'**
+  String get submitAnswer;
+
+  /// No description provided for @answerSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer saved'**
+  String get answerSaved;
+
+  /// No description provided for @hostStartNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Start / Next question'**
+  String get hostStartNext;
+
+  /// No description provided for @hostLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock'**
+  String get hostLock;
+
+  /// No description provided for @hostLockLate.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock (after timer)'**
+  String get hostLockLate;
+
+  /// No description provided for @hostBoard.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboard'**
+  String get hostBoard;
+
+  /// No description provided for @hostNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next question'**
+  String get hostNext;
+
+  /// No description provided for @hostFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish'**
+  String get hostFinish;
+
+  /// No description provided for @gameStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the game'**
+  String get gameStart;
+
+  /// No description provided for @correctAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct answer:'**
+  String get correctAnswer;
+
+  /// No description provided for @onlineCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Online: {count}'**
+  String onlineCount(Object count);
+
+  /// No description provided for @playersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Players: {count} / {max}'**
+  String playersCount(Object count, Object max);
+
+  /// No description provided for @minPlayersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Players: {count} / {max} — minimum {min}'**
+  String minPlayersHint(Object count, Object max, Object min);
+
+  /// No description provided for @copyCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy code'**
+  String get copyCode;
+
+  /// No description provided for @codeCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Code copied'**
+  String get codeCopied;
+
+  /// No description provided for @loadingWagers.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading wagers…'**
+  String get loadingWagers;
+
+  /// No description provided for @back.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get back;
+
+  /// No description provided for @statusLobby.
+  ///
+  /// In en, this message translates to:
+  /// **'Lobby'**
+  String get statusLobby;
+
+  /// No description provided for @statusQuestionOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open question'**
+  String get statusQuestionOpen;
+
+  /// No description provided for @statusQuestionLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked question'**
+  String get statusQuestionLocked;
+
+  /// No description provided for @statusReveal.
+  ///
+  /// In en, this message translates to:
+  /// **'Reveal'**
+  String get statusReveal;
+
+  /// No description provided for @statusLeaderboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboard'**
+  String get statusLeaderboard;
+
+  /// No description provided for @statusFinalWager.
+  ///
+  /// In en, this message translates to:
+  /// **'Final wager'**
+  String get statusFinalWager;
+
+  /// No description provided for @statusFinalReveal.
+  ///
+  /// In en, this message translates to:
+  /// **'Final reveal'**
+  String get statusFinalReveal;
+
+  /// No description provided for @statusFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Finished'**
+  String get statusFinished;
+
+  /// No description provided for @gameLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Game language'**
+  String get gameLanguage;
+
+  /// No description provided for @editorTitleAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Title AR'**
+  String get editorTitleAr;
+
+  /// No description provided for @editorDescAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Description AR'**
+  String get editorDescAr;
+
+  /// No description provided for @editorQuestionAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Question AR'**
+  String get editorQuestionAr;
+
+  /// No description provided for @editorAnswerAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer AR'**
+  String get editorAnswerAr;
+
+  /// No description provided for @editorAliasesAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Aliases AR (one per line)'**
+  String get editorAliasesAr;
 }
 
 class _AppLocalizationsDelegate
@@ -440,7 +658,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en', 'fr'].contains(locale.languageCode);
+      <String>['ar', 'en', 'fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -449,6 +667,8 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'ar':
+      return AppLocalizationsAr();
     case 'en':
       return AppLocalizationsEn();
     case 'fr':

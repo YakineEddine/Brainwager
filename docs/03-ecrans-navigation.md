@@ -73,10 +73,14 @@ Rewarded : débloquer 1 pack 24 h. UMP avant première pub (UE).
   (jamais de réponses) ; premium verrouillé = métadonnées + « Disponible
   bientôt », sans achat.
 - Create : sélecteur de pack réel (premium verrouillé désactivé, défaut =
-  premier accessible) ; plus de pack hardcodé.
+  premier accessible) + langue de partie FR/EN/AR explicite (indépendante
+  de la langue UI) ; plus de pack hardcodé.
+- `/create` : sélecteur de pack réel + langue de partie FR/EN/AR explicite
+  (indépendante de la langue UI).
 - `/packs/edit` + `/packs/edit/:id` (Phase 3C) : éditeur UGC — titres/
-  descriptions bilingues, 11..100 questions (réponses/alias/match mode/
-  difficulté), CGU création, code `PK-XXXX` serveur affiché/copiable,
-  zéro image, écritures uniquement via RPC 0011.
+  descriptions/questions/réponses/alias trilingues FR/EN/AR (champs AR en
+  RTL, champs FR/EN en LTR quelle que soit la locale UI), CGU création,
+  code `PK-XXXX` serveur affiché/copiable, zéro image, écritures uniquement
+  via RPC 0011.
 - NON terminé : import/deep link, report UI, purchases,
   5 packs officiels de production.

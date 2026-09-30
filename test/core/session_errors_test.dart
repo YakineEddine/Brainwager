@@ -67,6 +67,32 @@ void main() {
     );
   });
 
+  test('AC) pack-language-unavailable FR/EN/AR', () {
+    expect(
+      friendlyGameError(Exception('pack-language-unavailable'), 'fr'),
+      'Ce pack n’est pas disponible en arabe.',
+    );
+    expect(
+      friendlyGameError(Exception('pack-language-unavailable'), 'en'),
+      'This pack is not available in Arabic.',
+    );
+    expect(
+      friendlyGameError(Exception('pack-language-unavailable'), 'ar'),
+      'هذه الحزمة غير متاحة باللغة العربية.',
+    );
+  });
+
+  test('erreurs jeu de base en AR (échantillon)', () {
+    expect(
+      friendlyGameError(Exception('game-not-found'), 'ar'),
+      'اللعبة غير موجودة. تحقق من الرمز.',
+    );
+    expect(
+      friendlyGameError(Exception('not-member'), 'ar'),
+      'لست عضوًا في هذه اللعبة.',
+    );
+  });
+
   test('erreur inconnue -> message générique (détail brut gardé en debug)',
       () {
     expect(

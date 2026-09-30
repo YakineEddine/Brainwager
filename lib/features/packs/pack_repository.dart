@@ -8,7 +8,7 @@ import 'pack.dart';
 import 'pack_preview.dart';
 
 const _packColumns =
-    'id,title_fr,title_en,desc_fr,desc_en,is_official,is_premium,'
+    'id,title_fr,title_en,title_ar,desc_fr,desc_en,desc_ar,is_official,is_premium,'
     'price_sku,share_code,owner_id,is_hidden';
 
 class PackRepository {

@@ -77,7 +77,9 @@ aucune lecture directe des réponses, aucune écriture directe, RPC
 authentifiés uniquement) ; Phase 3C éditeur client terminé ;
 backend arabe 0012 terminé (schéma, langue `ar`, normalisation, RPC
 trilingues, DEMO01 arabisé).
-NEXT : UI Flutter arabe / RTL / sélection trilingue éditeur et partie.
+NEXT (réalisé Phase 3AR) : UI Flutter arabe / RTL automatique, catalogue et
+sélection trilingues, éditeur UGC trilingue sur RPC 0012, matching Dart
+aligné SQL 0012.
 Ensuite toujours en attente : import/deep links, report UI, achats,
 5 packs de production.
 Phase 3 NON terminée.

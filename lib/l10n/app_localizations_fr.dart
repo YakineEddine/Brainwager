@@ -175,4 +175,118 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get editorQuestions => 'Questions';
+
+  @override
+  String get create => 'Créer';
+
+  @override
+  String get joinCodeHint => 'Code (4-6)';
+
+  @override
+  String get gameTitle => 'Partie';
+
+  @override
+  String get waitingForHost => 'En attente du lancement par l’hôte…';
+
+  @override
+  String get answerHint => 'Ta réponse';
+
+  @override
+  String get submitAnswer => 'Valider (réponse + mise)';
+
+  @override
+  String get answerSaved => 'Réponse enregistrée';
+
+  @override
+  String get hostStartNext => 'Démarrer / Question suivante';
+
+  @override
+  String get hostLock => 'Verrouiller';
+
+  @override
+  String get hostLockLate => 'Verrouiller (après timer)';
+
+  @override
+  String get hostBoard => 'Classement';
+
+  @override
+  String get hostNext => 'Question suivante';
+
+  @override
+  String get hostFinish => 'Terminer';
+
+  @override
+  String get gameStart => 'Démarrer la partie';
+
+  @override
+  String get correctAnswer => 'Bonne réponse :';
+
+  @override
+  String onlineCount(Object count) {
+    return 'En ligne : $count';
+  }
+
+  @override
+  String playersCount(Object count, Object max) {
+    return 'Joueurs : $count / $max';
+  }
+
+  @override
+  String minPlayersHint(Object count, Object max, Object min) {
+    return 'Joueurs : $count / $max — minimum $min';
+  }
+
+  @override
+  String get copyCode => 'Copier le code';
+
+  @override
+  String get codeCopied => 'Code copié';
+
+  @override
+  String get loadingWagers => 'Chargement des mises…';
+
+  @override
+  String get back => 'Retour';
+
+  @override
+  String get statusLobby => 'Salon';
+
+  @override
+  String get statusQuestionOpen => 'Question ouverte';
+
+  @override
+  String get statusQuestionLocked => 'Question verrouillée';
+
+  @override
+  String get statusReveal => 'Révélation';
+
+  @override
+  String get statusLeaderboard => 'Classement';
+
+  @override
+  String get statusFinalWager => 'Mise finale';
+
+  @override
+  String get statusFinalReveal => 'Révélation finale';
+
+  @override
+  String get statusFinished => 'Terminée';
+
+  @override
+  String get gameLanguage => 'Langue de la partie';
+
+  @override
+  String get editorTitleAr => 'Titre AR';
+
+  @override
+  String get editorDescAr => 'Description AR';
+
+  @override
+  String get editorQuestionAr => 'Question AR';
+
+  @override
+  String get editorAnswerAr => 'Réponse AR';
+
+  @override
+  String get editorAliasesAr => 'Alias AR (un par ligne)';
 }

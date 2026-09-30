@@ -11,7 +11,7 @@
 3. **Anti-triche par construction** : bonnes réponses ET questions à venir jamais
    lisibles par les joueurs (RLS). Seules des RPC `security definer`
    (`get_current_question`, `reveal_answer`) exposent le nécessaire au bon moment.
-4. **i18n FR/EN dès le départ**, mode sombre, gros boutons, 60 fps sur entrée de gamme.
+4. **i18n FR/EN/AR (RTL automatique)** dès Phase 3AR, mode sombre, gros boutons, 60 fps sur entrée de gamme.
 5. **Monétisation non intrusive et sécurisée** : jamais de pub pendant une question ;
    droits premium jamais modifiables par le client (table `entitlements` + Edge Function).
 6. **Compte à rebours sans broadcast périodique** : calculé côté client depuis
@@ -24,7 +24,7 @@
 | Flutter | stable 3.47.3 constaté / Dart associé, `minSdk 24`, `targetSdk 36`, `compileSdk 36`, Java 17 | Exigence Play : nouvelles apps = API 36 (Android 16) depuis 31/08/2026. AAB requis |
 | État | `flutter_riverpod` 2.x (`Notifier`/`AsyncNotifier`, sans code-gen en Phase 1) | Simple, testable |
 | Navigation | `go_router` | Deep links `brainwager://join/ABC12` pour partage parties/packs |
-| i18n | `flutter_localizations` + `gen-l10n` (ARB `app_fr.arb` / `app_en.arb`) | Officiel, sans dépendance tierce |
+| i18n | `flutter_localizations` + `gen-l10n` (ARB `app_fr/en/ar.arb`, RTL automatique) | Officiel, sans dépendance tierce |
 | Backend | `supabase_flutter` 2.x | Auth anonyme + Postgres + Realtime |
 | Ads | `google_mobile_ads` + `user_messaging_platform` (UMP RGPD) | AdMob + consentement UE |
 | Billing | `in_app_purchase` + Edge Function `verify-purchase` + table `entitlements` | Validation serveur du purchase token Play, restauration incluse |

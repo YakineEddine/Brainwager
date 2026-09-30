@@ -56,7 +56,7 @@ class BrainwagerApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('fr'), Locale('en')],
+      supportedLocales: const [Locale('fr'), Locale('en'), Locale('ar')],
     );
   }
 }

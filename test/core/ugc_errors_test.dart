@@ -27,7 +27,7 @@ void main() {
   test('codes indexés + termes requis + inconnu', () {
     expect(
       friendlyUgcError(Exception('invalid-question:4'), 'fr'),
-      'Chaque question doit faire 2 à 500 caractères (FR et EN).',
+      'Chaque question doit faire 2 à 500 caractères (FR, EN, AR).',
     );
     expect(
       friendlyUgcError(Exception('terms-required'), 'en'),
@@ -36,6 +36,25 @@ void main() {
     expect(
       friendlyUgcError(Exception('something-else'), 'fr'),
       'Erreur réseau ou serveur. Réessaie.',
+    );
+  });
+
+  test('AD) erreurs arabes en AR', () {
+    expect(
+      friendlyUgcError(Exception('arabic-content-required'), 'ar'),
+      'تحتوي هذه الحزمة على محتوى عربي: الحقول العربية مطلوبة.',
+    );
+    expect(
+      friendlyUgcError(Exception('invalid-arabic-content'), 'ar'),
+      'يجب تقديم السؤال والإجابة بالعربية معًا.',
+    );
+    expect(
+      friendlyUgcError(Exception('pack-language-unavailable'), 'ar'),
+      'هذه الحزمة غير متاحة باللغة العربية.',
+    );
+    expect(
+      friendlyUgcError(Exception('pack-in-use'), 'ar'),
+      'هذه الحزمة مستخدمة في لعبة حالية ولا يمكن تعديلها بعد.',
     );
   });
 }

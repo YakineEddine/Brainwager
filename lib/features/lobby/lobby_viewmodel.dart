@@ -78,19 +78,29 @@ GameSession buildRestoredSession({
   );
 }
 
-/// Paramètres create_game (pur, testé) : pack choisi, options Phase 2
-/// figées (contrôles équipe/langue/durée = tickets séparés).
+/// Paramètres create_game (pur, testé) : pack + langue choisis, options
+/// Phase 2 figées (contrôles équipe/durée = tickets séparés).
 Map<String, dynamic> buildCreateGameParams({
   required String packId,
   required String nickname,
+  required String language,
 }) {
   return {
     'p_pack_id': packId,
     'p_nickname': nickname,
     'p_team_mode': false,
-    'p_language': 'fr',
+    'p_language': language,
     'p_duration': 30,
   };
+}
+
+/// Langue de partie par défaut : locale app si fr/en/ar, sinon fr.
+/// UI et contenu sont indépendants (UI FR peut créer une partie AR).
+String defaultGameLanguage(String appLanguageCode) {
+  if (appLanguageCode == 'en' || appLanguageCode == 'ar') {
+    return appLanguageCode;
+  }
+  return 'fr';
 }
 
 class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
@@ -100,6 +110,7 @@ class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
   Future<GameSession> createGame({
     required String nickname,
     required String packId,
+    required String language,
   }) async {
     final n = nickname.trim();
     if (!isNicknameClean(n)) throw Exception('pseudo-invalide');
@@ -108,7 +119,8 @@ class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
     try {
       final res = await supa().rpc(
         'create_game',
-        params: buildCreateGameParams(packId: packId, nickname: n),
+        params: buildCreateGameParams(
+            packId: packId, nickname: n, language: language),
       );
       final full = sessionFromCreateResponse(
         nickname: n,

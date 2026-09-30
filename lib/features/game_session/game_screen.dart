@@ -14,12 +14,42 @@ import '../../core/network/supabase_client.dart';
 import '../../core/network/realtime_service.dart';
 import '../../core/utils/clock.dart';
 import '../../core/utils/game_errors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/countdown_ring.dart';
 import '../game_engine/auto_lock.dart';
 import '../game_engine/reveal_policy.dart';
 import '../game_engine/timing.dart';
 import '../game_engine/wager_validator.dart';
 import '../lobby/lobby_viewmodel.dart';
+
+/// Direction du CONTENU de jeu (pure) : langue serveur/question, jamais
+/// la locale UI (une UI FR peut afficher une partie AR et inversement).
+TextDirection contentDirection(String languageCode) =>
+    languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+
+/// Libellé localisé d'un statut serveur (le brut ne s'affiche jamais seul).
+String gameStatusLabel(AppLocalizations l10n, String status) {
+  switch (status) {
+    case 'lobby':
+      return l10n.statusLobby;
+    case 'question_open':
+      return l10n.statusQuestionOpen;
+    case 'question_locked':
+      return l10n.statusQuestionLocked;
+    case 'reveal':
+      return l10n.statusReveal;
+    case 'leaderboard':
+      return l10n.statusLeaderboard;
+    case 'final_wager':
+      return l10n.statusFinalWager;
+    case 'final_reveal':
+      return l10n.statusFinalReveal;
+    case 'finished':
+      return l10n.statusFinished;
+    default:
+      return status;
+  }
+}
 
 /// Vrai quand l'écran doit afficher l'attente lobby (question encore
 /// illisible : get_current_question lève `not-started` en lobby).
@@ -310,9 +340,9 @@ class LobbyWaitingView extends StatelessWidget {
   final int presenceCount;
   final int memberCount;
   final int maxMembers;
+  final int minPlayers;
   final String? joinCode;
   final bool startEnabled;
-  final String? startHint;
   final VoidCallback onStart;
   final Future<void> Function(String code) onCopyCode;
   const LobbyWaitingView({
@@ -321,9 +351,9 @@ class LobbyWaitingView extends StatelessWidget {
     required this.presenceCount,
     required this.memberCount,
     required this.maxMembers,
+    required this.minPlayers,
     required this.joinCode,
     required this.startEnabled,
-    required this.startHint,
     required this.onStart,
     required this.onCopyCode,
   });
@@ -331,32 +361,34 @@ class LobbyWaitingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final code = joinCode;
-    final hint = startHint;
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('En attente du lancement par l’hôte…'),
+          Text(l10n.waitingForHost),
           const SizedBox(height: 8),
-          const Text('Code de partie'),
+          Text(l10n.joinCode),
           Text(
             code == null || code.isEmpty ? '…' : code,
             style: Theme.of(context).textTheme.headlineMedium,
+            textDirection: TextDirection.ltr,
           ),
           if (code != null && code.isNotEmpty)
             TextButton(
               onPressed: () => onCopyCode(code),
-              child: const Text('Copier le code'),
+              child: Text(l10n.copyCode),
             ),
           const SizedBox(height: 8),
-          Text('Joueurs : $memberCount / $maxMembers'),
-          Text('En ligne : $presenceCount'),
+          Text(l10n.playersCount(memberCount, maxMembers)),
+          Text(l10n.onlineCount(presenceCount)),
           if (isHost) ...[
             const SizedBox(height: 16),
-            if (hint != null) Text(hint),
+            if (!startEnabled)
+              Text(l10n.minPlayersHint(memberCount, maxMembers, minPlayers)),
             ElevatedButton(
               onPressed: startEnabled ? onStart : null,
-              child: const Text('Démarrer la partie'),
+              child: Text(l10n.gameStart),
             ),
           ],
         ],
@@ -380,6 +412,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   Map<String, dynamic>? _question;
   String? _revealed;
   String _status = '';
+  String _gameLang = 'fr';
   String? _joinCode;
   bool _isHost = false;
   int _memberCount = 0;
@@ -423,7 +456,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
               .read(lobbyViewModelProvider.notifier)
               .restoreGameSession(widget.gameId);
         } catch (e) {
-          if (mounted) setState(() => _sessionError = friendlyGameError(e));
+          if (mounted) {
+            setState(() => _sessionError = friendlyGameError(e, _lang()));
+          }
           return;
         }
       }
@@ -527,6 +562,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       _lastPosition = pos;
       _question = fresh;
       _status = fresh['status'] as String? ?? '';
+      _gameLang = (fresh['language'] as String?) ?? 'fr';
       _remainingSec = _computeRemaining(fresh);
     });
   }
@@ -891,10 +927,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
+  String _lang() => Localizations.localeOf(context).languageCode;
+
   void _snack(Object e) {
     if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(friendlyGameError(e))));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyGameError(e, _lang()))));
     }
   }
 
@@ -902,7 +940,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
     await Clipboard.setData(ClipboardData(text: code));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Code copié')),
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!.codeCopied)),
       );
     }
   }
@@ -1029,9 +1068,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
   @override
   Widget build(BuildContext context) {
     final err = _sessionError;
+    final l10n = AppLocalizations.of(context)!;
     if (err != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Partie')),
+        appBar: AppBar(title: Text(l10n.gameTitle)),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1040,7 +1080,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => context.go('/home'),
-                child: const Text('Retour'),
+                child: Text(l10n.back),
               ),
             ],
           ),
@@ -1054,17 +1094,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
         minPlayers: _config.minPlayers,
       );
       return Scaffold(
-        appBar: AppBar(title: const Text('Partie')),
+        appBar: AppBar(title: Text(l10n.gameTitle)),
         body: LobbyWaitingView(
           isHost: _isHost,
           presenceCount: _presenceCount,
           memberCount: _memberCount,
           maxMembers: _config.maxPlayers,
+          minPlayers: _config.minPlayers,
           joinCode: _joinCode,
           startEnabled: _isHost && canStart,
-          startHint: _isHost && !canStart
-              ? 'Joueurs : $_memberCount / ${_config.maxPlayers} — minimum ${_config.minPlayers}'
-              : null,
           onStart: _startOrNext,
           onCopyCode: _copyJoinCode,
         ),
@@ -1078,12 +1116,18 @@ class _GameScreenState extends ConsumerState<GameScreen>
         isFinal ? _config.finalWagers : List.generate(10, (i) => i + 1);
     final duration = (q?['duration_sec'] as int?) ?? _config.defaultDurationSec;
     return Scaffold(
-      appBar: AppBar(title: Text('Partie ${_status.isEmpty ? '' : '· $_status'}')),
+      appBar: AppBar(
+          title: Text(_status.isEmpty
+              ? l10n.gameTitle
+              : '${l10n.gameTitle} · ${gameStatusLabel(l10n, _status)}')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text(q?['prompt'] as String? ?? '',
-              style: Theme.of(context).textTheme.titleLarge),
+              style: Theme.of(context).textTheme.titleLarge,
+              textDirection: contentDirection(_gameLang),
+              textAlign:
+                  _gameLang == 'ar' ? TextAlign.right : TextAlign.left),
           const SizedBox(height: 12),
           CountdownRing(
             remainingSec: _remainingSec,
@@ -1091,20 +1135,21 @@ class _GameScreenState extends ConsumerState<GameScreen>
           ),
           const SizedBox(height: 4),
           // Debug Phase 2 : Presence observable (pas une autorité).
-          Text('En ligne : $_presenceCount'),
+          Text(l10n.onlineCount(_presenceCount)),
           const SizedBox(height: 12),
           TextField(
             controller: _answerCtrl,
             enabled: answering,
+            textDirection: contentDirection(_gameLang),
             onChanged: (_) {
               // Frappe après sauvegarde : modifiée localement, resoumettable.
               if (_submission.hasSavedAnswer && mounted) {
                 setState(() => _submission.markEdited());
               }
             },
-            decoration: const InputDecoration(
-              labelText: 'Ta réponse',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.answerHint,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
@@ -1130,9 +1175,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
             ],
           ),
           if (answering && !_wagersReady)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text('Chargement des mises…'),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(l10n.loadingWagers),
             ),
           const SizedBox(height: 12),
           ElevatedButton(
@@ -1143,12 +1188,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
             )
                 ? _submit
                 : null,
-            child: const Text('Valider (réponse + mise)'),
+            child: Text(l10n.submitAnswer),
           ),
           if (_submission.hasSavedAnswer && answering)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text('Réponse enregistrée'),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(l10n.answerSaved),
             ),
           const Divider(height: 32),
           // Lock piloté par le statut (+ seuil local pour les non-hôtes) ;
@@ -1161,33 +1206,33 @@ class _GameScreenState extends ConsumerState<GameScreen>
             ElevatedButton(
               onPressed: _lock,
               child: Text(
-                _isHost ? 'Verrouiller' : 'Verrouiller (après timer)',
+                _isHost ? l10n.hostLock : l10n.hostLockLate,
               ),
             ),
           if (showRevealFor(status: _status, isHost: _isHost))
             ElevatedButton(
               onPressed: _reveal,
-              child: const Text('Révéler la réponse (hôte)'),
+              child: Text(l10n.revealAnswer),
             ),
           if (showBoardFor(status: _status, isHost: _isHost))
             ElevatedButton(
               onPressed: _showLeaderboard,
-              child: const Text('Classement (hôte, après reveal)'),
+              child: Text(l10n.hostBoard),
             ),
           if (showNextFor(status: _status, isHost: _isHost, position: pos))
             ElevatedButton(
               onPressed: _startOrNext,
-              child: const Text('Question suivante (hôte)'),
+              child: Text(l10n.hostNext),
             ),
           if (showFinishFor(status: _status, isHost: _isHost))
             ElevatedButton(
               onPressed: _finish,
-              child: const Text('Terminer (hôte, après finale)'),
+              child: Text(l10n.hostFinish),
             ),
           if (_revealed != null)
             Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: Text('Bonne réponse : $_revealed',
+              child: Text('${l10n.correctAnswer} $_revealed',
                   style: Theme.of(context).textTheme.titleMedium),
             ),
         ],

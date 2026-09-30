@@ -76,8 +76,9 @@ void main() {
       await _pumpCreateEditor(tester);
       await tester.tap(find.text('Q1'));
       await tester.pumpAndSettle();
-      // Titre×4 puis carte Q1 : prompt×2, réponse FR à l'index 6.
-      await tester.enterText(find.byType(TextField).at(6), '1984');
+      // Titre×6 (FR/EN/AR × titre/desc) puis carte Q1 : prompt FR/EN/AR,
+      // réponse FR à l'index 9.
+      await tester.enterText(find.byType(TextField).at(9), '1984');
       await tester.pump();
       expect(
         find.text('Numeric answers are evaluated exactly.'),
@@ -90,7 +91,7 @@ void main() {
       await _pumpCreateEditor(tester);
       await tester.tap(find.text('Q1'));
       await tester.pumpAndSettle();
-      final field = find.byType(TextField).at(6);
+      final field = find.byType(TextField).at(9);
       await tester.enterText(field, '1984');
       await tester.pump();
       expect(

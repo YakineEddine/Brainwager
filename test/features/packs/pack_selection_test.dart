@@ -7,8 +7,10 @@ const _free = PackSummary(
   id: 'free1',
   titleFr: 'Démo',
   titleEn: 'Demo',
+  titleAr: 'تجريبي',
   descFr: '',
   descEn: '',
+  descAr: '',
   isOfficial: true,
   isPremium: false,
   priceSku: null,
@@ -21,8 +23,10 @@ const _locked = PackSummary(
   id: 'prem1',
   titleFr: 'Cinéma',
   titleEn: 'Cinema',
+  titleAr: '',
   descFr: '',
   descEn: '',
+  descAr: '',
   isOfficial: true,
   isPremium: true,
   priceSku: 'pack_cinema',
@@ -35,8 +39,10 @@ const _hidden = PackSummary(
   id: 'hid1',
   titleFr: 'Caché',
   titleEn: 'Hidden',
+  titleAr: '',
   descFr: '',
   descEn: '',
+  descAr: '',
   isOfficial: false,
   isPremium: false,
   priceSku: null,
@@ -77,12 +83,29 @@ void main() {
 
   test('K) createGame utilise le packId explicite, sans lookup share_code',
       () {
-    final params = buildCreateGameParams(packId: 'pid-123', nickname: 'Moi');
+    final params = buildCreateGameParams(
+        packId: 'pid-123', nickname: 'Moi', language: 'ar');
     expect(params['p_pack_id'], 'pid-123');
     expect(params['p_nickname'], 'Moi');
     expect(params.containsKey('p_share_code'), isFalse);
     expect(params['p_team_mode'], isFalse);
-    expect(params['p_language'], 'fr');
+    expect(params['p_language'], 'ar');
     expect(params['p_duration'], 30);
+  });
+
+  test('I) buildCreateGameParams envoie p_language explicite', () {
+    for (final lang in ['fr', 'en', 'ar']) {
+      final params = buildCreateGameParams(
+          packId: 'p', nickname: 'Moi', language: lang);
+      expect(params['p_language'], lang);
+    }
+  });
+
+  test('J) langue par défaut : ar depuis locale arabe, fr sinon', () {
+    expect(defaultGameLanguage('ar'), 'ar');
+    expect(defaultGameLanguage('en'), 'en');
+    expect(defaultGameLanguage('fr'), 'fr');
+    expect(defaultGameLanguage('de'), 'fr');
+    expect(defaultGameLanguage(''), 'fr');
   });
 }

@@ -6,8 +6,10 @@ const _free = PackSummary(
   id: 'free1',
   titleFr: 'Démo Soirée',
   titleEn: 'Demo Party',
+  titleAr: 'سهرة تجريبية',
   descFr: 'Soirée test',
   descEn: 'Test party',
+  descAr: '',
   isOfficial: true,
   isPremium: false,
   priceSku: null,
@@ -20,8 +22,10 @@ const _premium = PackSummary(
   id: 'prem1',
   titleFr: 'Cinéma',
   titleEn: 'Cinema',
+  titleAr: '',
   descFr: '',
   descEn: '',
+  descAr: '',
   isOfficial: true,
   isPremium: true,
   priceSku: 'pack_cinema',
@@ -51,8 +55,10 @@ void main() {
       id: 'x',
       titleFr: '',
       titleEn: '',
+      titleAr: '',
       descFr: '',
       descEn: '',
+      descAr: '',
       isOfficial: true,
       isPremium: true,
       priceSku: null,
@@ -97,5 +103,65 @@ void main() {
     expect(rows[1].matchMode, isNull);
     expect(rows[1].localizedPrompt('fr'), 'Q2 ?');
     expect(rows[1].localizedPrompt('en'), 'Q2?');
+  });
+
+  test('D) parse title_ar/desc_ar', () {
+    final p = PackSummary.fromRow({
+      'id': '1',
+      'title_fr': 'Titre',
+      'title_en': 'Title',
+      'title_ar': 'عنوان',
+      'desc_fr': '',
+      'desc_en': '',
+      'desc_ar': 'وصف',
+    });
+    expect(p.titleAr, 'عنوان');
+    expect(p.descAr, 'وصف');
+  });
+
+  test('E) localizedTitle ar utilise l’arabe', () {
+    expect(_free.localizedTitle('ar'), 'سهرة تجريبية');
+  });
+
+  test('F) arabe vide => repli FR (jamais de blanc)', () {
+    expect(_premium.localizedTitle('ar'), 'Cinéma');
+    expect(_premium.localizedDescription('ar'), '');
+    expect(_free.localizedDescription('ar'), 'Soirée test');
+  });
+
+  test('G) aperçu parse prompt_ar', () {
+    final rows = parsePackPreview([
+      {
+        'idx': 0,
+        'prompt_fr': 'Q ?',
+        'prompt_en': 'Q?',
+        'prompt_ar': 'سؤال؟',
+        'category': 'g',
+        'difficulty': 1,
+      },
+    ]);
+    expect(rows.single.promptAr, 'سؤال؟');
+  });
+
+  test('H) localizedPrompt ar + repli FR', () {
+    final rows = parsePackPreview([
+      {
+        'idx': 0,
+        'prompt_fr': 'Q ?',
+        'prompt_en': 'Q?',
+        'prompt_ar': 'سؤال؟',
+        'category': 'g',
+        'difficulty': 1,
+      },
+      {
+        'idx': 1,
+        'prompt_fr': 'Q2 ?',
+        'prompt_en': 'Q2?',
+        'category': 'g',
+        'difficulty': 1,
+      },
+    ]);
+    expect(rows[0].localizedPrompt('ar'), 'سؤال؟');
+    expect(rows[1].localizedPrompt('ar'), 'Q2 ?');
   });
 }

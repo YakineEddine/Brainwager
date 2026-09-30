@@ -1,11 +1,20 @@
 // Normalisation + Levenshtein + match_mode.
 // Nombres et années toujours en exact, même si la question est en fuzzy.
+// Arabe : miroir exact de normalize_answer SQL (migration 0012), même ordre.
 import '../../core/config/game_config.dart';
+import '../../core/utils/arabic_text.dart' as arabic;
 import 'models.dart';
 
 final _numberRe = RegExp(r'^-?\d+([.,]\d+)?$');
 final _yearRe = RegExp(r'^(17|18|19|20)\d{2}$');
 const _articles = {'le', 'la', 'les', 'un', 'une', 'des', "l'", 'l', 'd', 'the', 'a', 'an'};
+
+// Classe de conservation SQL [^a-z0-9ء-ي\s\-], bornes en codepoints.
+final _keepRe = RegExp(
+  '[^a-z0-9${String.fromCharCode(0x0621)}-${String.fromCharCode(0x064A)}\\s\\-]',
+);
+final _alefLam =
+    '${String.fromCharCode(0x0627)}${String.fromCharCode(0x0644)}';
 
 String normalizeAnswer(String raw) {
   var s = raw.toLowerCase().trim();
@@ -27,12 +36,25 @@ String normalizeAnswer(String raw) {
       .replaceAll('ÿ', 'y')
       .replaceAll('ç', 'c')
       .replaceAll('ñ', 'n');
+  // Étapes arabes dans l'ordre SQL : chiffres, formes d'Alef,
+  // tatweel/harakat, séparateurs décimaux/milliers.
+  s = arabic.mapArabicDigits(s);
+  s = arabic.normalizeAlefForms(s);
+  s = arabic.stripArabicMarks(s);
+  s = s.replaceAll(String.fromCharCode(0x066B), '.');
+  s = s.replaceAll(String.fromCharCode(0x066C), '');
   s = s.replaceAll(RegExp(r"[’‘'ʼ`]"), "'");
-  s = s.replaceAll(RegExp(r'[^a-z0-9\s\-]'), ' ');
+  s = s.replaceAll(_keepRe, ' ');
   s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
   final parts = s.split(' ');
   if (parts.isNotEmpty && _articles.contains(parts.first) && parts.length > 1) {
     s = parts.sublist(1).join(' ');
+  }
+  // Article défini arabe ال devant lettre arabe (miroir substr(v, 3)).
+  if (s.startsWith(_alefLam) &&
+      s.length > 2 &&
+      arabic.isArabicLetter(s.runes.elementAt(2))) {
+    s = s.substring(2);
   }
   // Années/nombres : uniformise séparateurs pour comparaison exacte.
   s = s.replaceAll(',', '.');

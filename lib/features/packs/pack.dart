@@ -5,8 +5,10 @@ class PackSummary {
   final String id;
   final String titleFr;
   final String titleEn;
+  final String titleAr;
   final String descFr;
   final String descEn;
+  final String descAr;
   final bool isOfficial;
   final bool isPremium;
   final String? priceSku;
@@ -18,8 +20,10 @@ class PackSummary {
     required this.id,
     required this.titleFr,
     required this.titleEn,
+    required this.titleAr,
     required this.descFr,
     required this.descEn,
+    required this.descAr,
     required this.isOfficial,
     required this.isPremium,
     required this.priceSku,
@@ -33,8 +37,10 @@ class PackSummary {
       id: row['id'] as String,
       titleFr: (row['title_fr'] as String?) ?? '',
       titleEn: (row['title_en'] as String?) ?? '',
+      titleAr: (row['title_ar'] as String?) ?? '',
       descFr: (row['desc_fr'] as String?) ?? '',
       descEn: (row['desc_en'] as String?) ?? '',
+      descAr: (row['desc_ar'] as String?) ?? '',
       isOfficial: (row['is_official'] as bool?) ?? false,
       isPremium: (row['is_premium'] as bool?) ?? false,
       priceSku: row['price_sku'] as String?,
@@ -44,11 +50,23 @@ class PackSummary {
     );
   }
 
-  String localizedTitle(String languageCode) =>
-      languageCode == 'en' ? titleEn : titleFr;
+  /// Titre localisé, repli FR défensif (jamais de titre vide affiché).
+  String localizedTitle(String languageCode) {
+    final localized =
+        languageCode == 'en' ? titleEn : languageCode == 'ar' ? titleAr : titleFr;
+    if (localized.trim().isNotEmpty) return localized;
+    return titleFr;
+  }
 
-  String localizedDescription(String languageCode) =>
-      languageCode == 'en' ? descEn : descFr;
+  String localizedDescription(String languageCode) {
+    final localized = languageCode == 'en'
+        ? descEn
+        : languageCode == 'ar'
+            ? descAr
+            : descFr;
+    if (localized.trim().isNotEmpty) return localized;
+    return descFr;
+  }
 
   /// Pack personnel (UGC) : visible uniquement à son propriétaire via RLS,
   /// donc tout pack non officiel affiché ici est "Mon pack".

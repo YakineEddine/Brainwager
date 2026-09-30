@@ -1,136 +1,203 @@
-// Messages d'erreur conviviaux FR pour les conditions de jeu attendues.
+// Messages de jeu conviviaux FR/EN/AR pour les conditions attendues.
 // L'UI n'affiche que ceci ; le détail brut reste dans l'exception (debug).
-String friendlyGameError(Object error) {
+// L'appelant transmet Localizations.localeOf(context).languageCode.
+String friendlyGameError(Object error, [String languageCode = 'fr']) {
+  final en = languageCode == 'en';
+  final ar = languageCode == 'ar';
+  String fr(String f, String e, String a) => en ? e : ar ? a : f;
   final s = '$error';
   if (s.contains('game-not-found')) {
-    return 'Partie introuvable. Vérifie le code.';
+    return fr('Partie introuvable. Vérifie le code.',
+        'Game not found. Check the code.', 'اللعبة غير موجودة. تحقق من الرمز.');
   }
   if (s.contains('game-already-started')) {
-    return 'La partie a déjà commencé.';
+    return fr('La partie a déjà commencé.', 'The game already started.',
+        'اللعبة بدأت بالفعل.');
   }
   if (s.contains('nickname-taken')) {
-    return 'Ce pseudo est déjà pris dans cette partie.';
+    return fr(
+        'Ce pseudo est déjà pris dans cette partie.',
+        'This nickname is already taken in this game.',
+        'هذا الاسم المستعار مستخدم بالفعل في هذه اللعبة.');
   }
   if (s.contains('game-full')) {
-    return 'Partie complète (50 joueurs max).';
+    return fr('Partie complète (50 joueurs max).',
+        'Game is full (50 players max).', 'اللعبة ممتلئة (50 لاعبًا كحد أقصى).');
   }
   if (s.contains('not-enough-players')) {
-    return 'Il faut au moins 2 joueurs pour démarrer.';
+    return fr(
+        'Il faut au moins 2 joueurs pour démarrer.',
+        'At least 2 players are needed to start.',
+        'يلزم لاعبان على الأقل للبدء.');
+  }
+  if (s.contains('pack-language-unavailable')) {
+    return fr(
+        'Ce pack n’est pas disponible en arabe.',
+        'This pack is not available in Arabic.',
+        'هذه الحزمة غير متاحة باللغة العربية.');
   }
   if (s.contains('not-member')) {
-    return 'Tu n’es pas membre de cette partie.';
+    return fr('Tu n’es pas membre de cette partie.',
+        'You are not a member of this game.', 'لست عضوًا في هذه اللعبة.');
   }
   if (s.contains('not-open')) {
-    return 'Question fermée : attends la suivante.';
+    return fr('Question fermée : attends la suivante.',
+        'Question closed: wait for the next one.', 'السؤال مغلق: انتظر التالي.');
   }
   if (s.contains('not-locked')) {
-    return 'La question n’est pas encore verrouillée.';
+    return fr(
+        'La question n’est pas encore verrouillée.',
+        'The question is not locked yet.',
+        'السؤال غير مقفل بعد.');
   }
   if (s.contains('not-allowed-yet')) {
-    return 'Verrouillage trop tôt : attends la fin du timer.';
+    return fr(
+        'Verrouillage trop tôt : attends la fin du timer.',
+        'Too early to lock: wait for the timer.',
+        'القفل مبكر جدًا: انتظر نهاية المؤقت.');
   }
-  if (s.contains('locked')) return 'Temps écoulé : question verrouillée.';
+  if (s.contains('locked')) {
+    return fr('Temps écoulé : question verrouillée.',
+        'Time is up: question locked.', 'انتهى الوقت: السؤال مقفل.');
+  }
   if (s.contains('empty-answer')) {
-    return 'Écris une réponse avant de valider.';
+    return fr('Écris une réponse avant de valider.',
+        'Write an answer before submitting.', 'اكتب إجابة قبل التأكيد.');
   }
   if (s.contains('invalid-final-wager')) {
-    return 'Mise finale : 0, 10 ou 20 uniquement.';
+    return fr('Mise finale : 0, 10 ou 20 uniquement.',
+        'Final wager: 0, 10 or 20 only.', 'الرهان الأخير: 0 أو 10 أو 20 فقط.');
   }
   if (s.contains('invalid-wager')) {
-    return 'Mise invalide pour cette question.';
+    return fr('Mise invalide pour cette question.',
+        'Invalid wager for this question.', 'رهان غير صالح لهذا السؤال.');
   }
   if (s.contains('wrong-index')) {
-    return 'Question périmée : recharge l’état.';
+    return fr('Question périmée : recharge l’état.',
+        'Stale question: reload the state.', 'سؤال قديم: أعد تحميل الحالة.');
   }
   if (s.contains('bad-transition')) {
-    return 'Action impossible dans l’état actuel.';
+    return fr('Action impossible dans l’état actuel.',
+        'Action not allowed in the current state.',
+        'الإجراء غير ممكن في الحالة الحالية.');
   }
   if (s.contains('wager-already-used')) {
-    return 'Mise déjà utilisée : choisis-en une autre.';
+    return fr(
+        'Mise déjà utilisée : choisis-en une autre.',
+        'Wager already used: pick another one.',
+        'الرهان مستخدم بالفعل: اختر رهانًا آخر.');
   }
   if (s.contains('session-absente')) {
-    return 'Session perdue : rejoins la partie à nouveau.';
+    return fr(
+        'Session perdue : rejoins la partie à nouveau.',
+        'Session lost: join the game again.',
+        'فُقدت الجلسة: انضم إلى اللعبة مجددًا.');
   }
-  return 'Erreur réseau ou serveur. Réessaie.';
+  return fr('Erreur réseau ou serveur. Réessaie.',
+      'Network or server error. Try again.', 'خطأ في الشبكة أو الخادم. حاول مجددًا.');
 }
 
-/// Messages UGC FR/EN (Phase 3C) : validation cliente (mêmes codes que le
-/// serveur 0011) + erreurs RPC. Jamais de texte PostgREST brut en UI.
+/// Messages UGC FR/EN/AR : validation cliente (mêmes codes que le serveur)
+/// + erreurs RPC. Jamais de texte PostgREST brut en UI.
 /// Les codes indexés (`invalid-question:3`) sont réduits à leur base.
 String friendlyUgcError(Object error, String languageCode) {
   final en = languageCode == 'en';
+  final ar = languageCode == 'ar';
+  String t(String f, String e, String a) => en ? e : ar ? a : f;
   // Codes serveur type `invalid-question` (éventuellement `invalid-question:3`
   // côté validation cliente) : premier token à tirets du texte brut.
   final code =
       RegExp(r'[a-z]+(?:-[a-z]+)+').firstMatch('$error')?.group(0) ?? '';
   switch (code) {
     case 'terms-required':
-      return en
-          ? 'You must accept the content terms to create a pack.'
-          : 'Tu dois accepter les CGU de création de contenu.';
+      return t(
+          'Tu dois accepter les CGU de création de contenu.',
+          'You must accept the content terms to create a pack.',
+          'يجب قبول شروط إنشاء المحتوى لإنشاء حزمة.');
     case 'invalid-title':
-      return en
-          ? 'Title must be 2–80 characters (FR and EN).'
-          : 'Le titre doit faire 2 à 80 caractères (FR et EN).';
+      return t(
+          'Le titre doit faire 2 à 80 caractères (FR, EN, AR).',
+          'Title must be 2–80 characters (FR, EN, AR).',
+          'يجب أن يكون العنوان من 2 إلى 80 حرفًا (بالفرنسية والإنجليزية والعربية).');
     case 'invalid-description':
-      return en
-          ? 'Description must be 500 characters max.'
-          : 'La description doit faire 500 caractères max.';
+      return t(
+          'La description doit faire 500 caractères max.',
+          'Description must be 500 characters max.',
+          'يجب ألا يتجاوز الوصف 500 حرف.');
     case 'invalid-questions':
-      return en ? 'Invalid question list.' : 'Liste de questions invalide.';
+      return t('Liste de questions invalide.', 'Invalid question list.',
+          'قائمة الأسئلة غير صالحة.');
     case 'pack-too-small':
-      return en
-          ? 'A pack needs at least 11 questions.'
-          : 'Un pack nécessite au moins 11 questions.';
+      return t(
+          'Un pack nécessite au moins 11 questions.',
+          'A pack needs at least 11 questions.',
+          'تتطلب الحزمة 11 سؤالًا على الأقل.');
     case 'pack-too-large':
-      return en
-          ? 'A pack holds 100 questions max.'
-          : 'Un pack contient 100 questions max.';
+      return t('Un pack contient 100 questions max.',
+          'A pack holds 100 questions max.', 'تحتوي الحزمة على 100 سؤال كحد أقصى.');
     case 'invalid-question':
-      return en
-          ? 'A question must be 2–500 characters (FR and EN).'
-          : 'Chaque question doit faire 2 à 500 caractères (FR et EN).';
+      return t(
+          'Chaque question doit faire 2 à 500 caractères (FR, EN, AR).',
+          'Each question must be 2–500 characters (FR, EN, AR).',
+          'يجب أن يكون كل سؤال من 2 إلى 500 حرف (بالفرنسية والإنجليزية والعربية).');
     case 'invalid-answer':
-      return en
-          ? 'Each answer must be 1–200 characters (FR and EN).'
-          : 'Chaque réponse doit faire 1 à 200 caractères (FR et EN).';
+      return t(
+          'Chaque réponse doit faire 1 à 200 caractères (FR, EN, AR).',
+          'Each answer must be 1–200 characters (FR, EN, AR).',
+          'يجب أن تكون كل إجابة من 1 إلى 200 حرف (بالفرنسية والإنجليزية والعربية).');
     case 'invalid-category':
-      return en
-          ? 'Category must be 1–40 characters.'
-          : 'La catégorie doit faire 1 à 40 caractères.';
+      return t(
+          'La catégorie doit faire 1 à 40 caractères.',
+          'Category must be 1–40 characters.',
+          'يجب أن تكون الفئة من 1 إلى 40 حرفًا.');
     case 'invalid-difficulty':
-      return en
-          ? 'Difficulty must be 1, 2 or 3.'
-          : 'La difficulté doit être 1, 2 ou 3.';
+      return t('La difficulté doit être 1, 2 ou 3.',
+          'Difficulty must be 1, 2 or 3.', 'يجب أن تكون الصعوبة 1 أو 2 أو 3.');
     case 'invalid-match-mode':
-      return en
-          ? 'Match mode must be exact or fuzzy.'
-          : 'Le mode doit être exact ou fuzzy.';
+      return t('Le mode doit être exact ou fuzzy.',
+          'Match mode must be exact or fuzzy.', 'يجب أن يكون الوضع مطابقًا تامًا أو مرنًا.');
     case 'invalid-aliases':
-      return en
-          ? 'Aliases must be text, 100 characters max each.'
-          : 'Les alias doivent être du texte, 100 caractères max chacun.';
+      return t(
+          'Les alias doivent être du texte, 100 caractères max chacun.',
+          'Aliases must be text, 100 characters max each.',
+          'يجب أن تكون المرادفات نصًا، بحد أقصى 100 حرف لكل منها.');
     case 'too-many-aliases':
-      return en
-          ? '20 aliases max per language.'
-          : '20 alias max par langue.';
+      return t('20 alias max par langue.', '20 aliases max per language.',
+          '20 مرادفًا كحد أقصى لكل لغة.');
     case 'ugc-image-forbidden':
-      return en
-          ? 'Images are not allowed in community packs.'
-          : 'Les images sont interdites dans les packs communautaires.';
+      return t(
+          'Les images sont interdites dans les packs communautaires.',
+          'Images are not allowed in community packs.',
+          'الصور ممنوعة في الحزم المجتمعية.');
     case 'pack-not-found':
-      return en ? 'Pack not found.' : 'Pack introuvable.';
+      return t('Pack introuvable.', 'Pack not found.', 'الحزمة غير موجودة.');
     case 'pack-not-editable':
-      return en
-          ? 'Only the owner can edit this pack.'
-          : 'Seul le propriétaire peut modifier ce pack.';
+      return t(
+          'Seul le propriétaire peut modifier ce pack.',
+          'Only the owner can edit this pack.',
+          'فقط المالك يمكنه تعديل هذه الحزمة.');
     case 'pack-in-use':
-      return en
-          ? 'This pack is used by an existing game and cannot be edited yet.'
-          : 'Ce pack est utilisé par une partie existante et ne peut pas encore être modifié.';
+      return t(
+          'Ce pack est utilisé par une partie existante et ne peut pas encore être modifié.',
+          'This pack is used by an existing game and cannot be edited yet.',
+          'هذه الحزمة مستخدمة في لعبة حالية ولا يمكن تعديلها بعد.');
+    case 'arabic-content-required':
+      return t(
+          'Ce pack contient déjà de l’arabe : les champs arabes sont requis.',
+          'This pack already has Arabic content: Arabic fields are required.',
+          'تحتوي هذه الحزمة على محتوى عربي: الحقول العربية مطلوبة.');
+    case 'invalid-arabic-content':
+      return t(
+          'Le prompt et la réponse arabes doivent être fournis ensemble.',
+          'Arabic prompt and answer must be provided together.',
+          'يجب تقديم السؤال والإجابة بالعربية معًا.');
+    case 'pack-language-unavailable':
+      return t(
+          'Ce pack n’est pas disponible en arabe.',
+          'This pack is not available in Arabic.',
+          'هذه الحزمة غير متاحة باللغة العربية.');
     default:
-      return en
-          ? 'Network or server error. Try again.'
-          : 'Erreur réseau ou serveur. Réessaie.';
+      return t('Erreur réseau ou serveur. Réessaie.',
+          'Network or server error. Try again.', 'خطأ في الشبكة أو الخادم. حاول مجددًا.');
   }
 }

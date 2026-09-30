@@ -13,27 +13,28 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Brainwager')),
+      appBar: AppBar(title: Text(l10n.appTitle)),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Parie sur ce que tu sais'),
+            Text(l10n.tagline),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => context.go('/create'),
-              child: const Text('Créer une partie'),
+              child: Text(l10n.createGame),
             ),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () => context.go('/join'),
-              child: const Text('Rejoindre'),
+              child: Text(l10n.joinGame),
             ),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () => context.go('/packs'),
-              child: Text(AppLocalizations.of(context)!.packs),
+              child: Text(l10n.packs),
             ),
           ],
         ),
@@ -52,6 +53,7 @@ class CreateScreen extends ConsumerStatefulWidget {
 class _CreateScreenState extends ConsumerState<CreateScreen> {
   final _pseudo = TextEditingController();
   String? _selectedPackId;
+  String? _gameLang;
 
   @override
   void dispose() {
@@ -64,7 +66,8 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
     final lobby = ref.watch(lobbyViewModelProvider);
     final catalog = ref.watch(packCatalogProvider);
     final l10n = AppLocalizations.of(context)!;
-    final lang = Localizations.localeOf(context).languageCode;
+    final appLang = Localizations.localeOf(context).languageCode;
+    final lang = _gameLang ?? defaultGameLanguage(appLang);
     // Pack effectif : choix utilisateur s'il reste accessible, sinon défaut.
     // Même logique que le sélecteur ci-dessous.
     String? selectedPackId;
@@ -84,14 +87,28 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
       }
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Créer une partie')),
+      appBar: AppBar(title: Text(l10n.createGame)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             TextField(
               controller: _pseudo,
-              decoration: const InputDecoration(labelText: 'Pseudo'),
+              decoration: InputDecoration(labelText: l10n.nickname),
+            ),
+            const SizedBox(height: 12),
+            // Langue du CONTENU de partie (indépendante de la langue UI) :
+            // une UI FR peut créer une partie AR.
+            Text(l10n.gameLanguage),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'fr', label: Text('Français')),
+                ButtonSegment(value: 'en', label: Text('English')),
+                ButtonSegment(value: 'ar', label: Text('العربية')),
+              ],
+              selected: {lang},
+              onSelectionChanged: (s) =>
+                  setState(() => _gameLang = s.first),
             ),
             const SizedBox(height: 12),
             catalog.when(
@@ -145,18 +162,22 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                             .createGame(
                               nickname: _pseudo.text,
                               packId: selectedPackId!,
+                              language: lang,
                             );
                         if (context.mounted) context.go('/game/${s.gameId}');
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                                content: Text(friendlyGameError(e))),
+                                content: Text(friendlyGameError(
+                                    e,
+                                    Localizations.localeOf(context)
+                                        .languageCode))),
                           );
                         }
                       }
                     },
-              child: const Text('Créer'),
+              child: Text(l10n.create),
             ),
           ],
         ),
@@ -186,19 +207,21 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
   @override
   Widget build(BuildContext context) {
     final lobby = ref.watch(lobbyViewModelProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final lang = Localizations.localeOf(context).languageCode;
     return Scaffold(
-      appBar: AppBar(title: const Text('Rejoindre')),
+      appBar: AppBar(title: Text(l10n.joinGame)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             TextField(
               controller: _code,
-              decoration: const InputDecoration(labelText: 'Code (4-6)'),
+              decoration: InputDecoration(labelText: l10n.joinCodeHint),
             ),
             TextField(
               controller: _pseudo,
-              decoration: const InputDecoration(labelText: 'Pseudo'),
+              decoration: InputDecoration(labelText: l10n.nickname),
             ),
             const SizedBox(height: 12),
             ElevatedButton(
@@ -217,12 +240,13 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                                content: Text(friendlyGameError(e))),
+                                content:
+                                    Text(friendlyGameError(e, lang))),
                           );
                         }
                       }
                     },
-              child: const Text('Rejoindre'),
+              child: Text(l10n.joinGame),
             ),
           ],
         ),

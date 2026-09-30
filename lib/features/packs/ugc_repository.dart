@@ -12,7 +12,8 @@ class UgcSaveResult {
   const UgcSaveResult({required this.id, required this.shareCode});
 }
 
-/// Paramètres create_ugc_pack (purs) : CGU explicites + payload exact.
+/// Paramètres create_ugc_pack trilingues 0012 (purs) : CGU explicites +
+/// payload exact. Jamais la surcharge FR/EN historique depuis ce client.
 Map<String, dynamic> buildCreateUgcParams(
   UgcPackDraft draft, {
   required bool acceptTerms,
@@ -20,14 +21,16 @@ Map<String, dynamic> buildCreateUgcParams(
   return {
     'p_title_fr': draft.titleFr,
     'p_title_en': draft.titleEn,
+    'p_title_ar': draft.titleAr,
     'p_desc_fr': draft.descFr,
     'p_desc_en': draft.descEn,
+    'p_desc_ar': draft.descAr,
     'p_questions': [for (final q in draft.questions) q.toRpcJson()],
     'p_accept_terms': acceptTerms,
   };
 }
 
-/// Paramètres update_ugc_pack (purs) : jamais de p_accept_terms.
+/// Paramètres update_ugc_pack trilingues (purs) : jamais de p_accept_terms.
 Map<String, dynamic> buildUpdateUgcParams(
   String packId,
   UgcPackDraft draft,
@@ -36,8 +39,10 @@ Map<String, dynamic> buildUpdateUgcParams(
     'p_pack': packId,
     'p_title_fr': draft.titleFr,
     'p_title_en': draft.titleEn,
+    'p_title_ar': draft.titleAr,
     'p_desc_fr': draft.descFr,
     'p_desc_en': draft.descEn,
+    'p_desc_ar': draft.descAr,
     'p_questions': [for (final q in draft.questions) q.toRpcJson()],
   };
 }

@@ -5,10 +5,13 @@ import 'package:brainwager/features/packs/ugc_repository.dart';
 UgcQuestionDraft _q({
   String promptFr = 'Question ?',
   String promptEn = 'Question?',
+  String promptAr = 'سؤال؟',
   String answerFr = 'Réponse',
   String answerEn = 'Answer',
+  String answerAr = 'إجابة',
   List<String> aliasesFr = const [],
   List<String> aliasesEn = const [],
+  List<String> aliasesAr = const [],
   String category = 'general',
   int difficulty = 1,
   String matchMode = 'fuzzy',
@@ -16,10 +19,13 @@ UgcQuestionDraft _q({
     UgcQuestionDraft(
       promptFr: promptFr,
       promptEn: promptEn,
+      promptAr: promptAr,
       answerMainFr: answerFr,
       answerMainEn: answerEn,
+      answerMainAr: answerAr,
       aliasesFr: aliasesFr,
       aliasesEn: aliasesEn,
+      aliasesAr: aliasesAr,
       category: category,
       difficulty: difficulty,
       matchMode: matchMode,
@@ -28,8 +34,10 @@ UgcQuestionDraft _q({
 UgcPackDraft _pack(List<UgcQuestionDraft> questions) => UgcPackDraft(
       titleFr: 'Titre',
       titleEn: 'Title',
+      titleAr: 'عنوان',
       descFr: '',
       descEn: '',
+      descAr: '',
       questions: questions,
     );
 
@@ -82,17 +90,20 @@ void main() {
   });
 
   group('toRpcJson', () {
-    test('B) jeu de clés exact', () {
+    test('B) jeu de clés exact (12 clés trilingues)', () {
       final json = _q().toRpcJson();
       expect(
         json.keys.toSet(),
         {
           'prompt_fr',
           'prompt_en',
+          'prompt_ar',
           'answer_main_fr',
           'answer_main_en',
+          'answer_main_ar',
           'aliases_fr',
           'aliases_en',
+          'aliases_ar',
           'category',
           'difficulty',
           'match_mode',
@@ -113,6 +124,7 @@ void main() {
         'is_hidden',
         'share_code',
         'price_sku',
+        'report_count',
       ]) {
         expect(json.containsKey(forbidden), isFalse, reason: forbidden);
       }
@@ -286,13 +298,15 @@ void main() {
   });
 
   group('paramètres RPC', () {
-    test('P) create inclut p_accept_terms + payload exact', () {
+    test('P) create inclut p_accept_terms + payload exact trilingue', () {
       final params = buildCreateUgcParams(
         _pack([_q()]),
         acceptTerms: true,
       );
       expect(params['p_accept_terms'], isTrue);
       expect(params['p_title_fr'], 'Titre');
+      expect(params['p_title_ar'], 'عنوان');
+      expect(params['p_desc_ar'], '');
       final questions = params['p_questions'] as List;
       expect(questions.length, 1);
       expect(
@@ -300,10 +314,13 @@ void main() {
         {
           'prompt_fr',
           'prompt_en',
+          'prompt_ar',
           'answer_main_fr',
           'answer_main_en',
+          'answer_main_ar',
           'aliases_fr',
           'aliases_en',
+          'aliases_ar',
           'category',
           'difficulty',
           'match_mode',
@@ -311,11 +328,104 @@ void main() {
       );
     });
 
-    test('Q) update sans p_accept_terms', () {
+    test('Q) update trilingue sans p_accept_terms', () {
       final params = buildUpdateUgcParams('pack-1', _pack([_q()]));
       expect(params['p_pack'], 'pack-1');
       expect(params.containsKey('p_accept_terms'), isFalse);
+      expect(params['p_title_ar'], 'عنوان');
+      expect(params['p_desc_ar'], '');
       expect((params['p_questions'] as List).length, 1);
+    });
+  });
+
+  group('arabe (0012)', () {
+    test('M) parse titre/desc AR', () {
+      final draft = parseUgcPackForEdit({
+        'id': 'p',
+        'title_ar': 'عنوان',
+        'desc_ar': 'وصف',
+        'questions': [],
+      });
+      expect(draft.titleAr, 'عنوان');
+      expect(draft.descAr, 'وصف');
+    });
+
+    test('N) parse prompt/réponse/alias AR sans perte', () {
+      final draft = parseUgcPackForEdit({
+        'id': 'p',
+        'questions': [
+          {
+            'idx': 0,
+            'prompt_ar': 'سؤال؟',
+            'answer_main_ar': 'إجابة',
+            'aliases_ar': ['مرادف'],
+          },
+        ],
+      });
+      final q = draft.questions.single;
+      expect(q.promptAr, 'سؤال؟');
+      expect(q.answerMainAr, 'إجابة');
+      expect(q.aliasesAr, ['مرادف']);
+    });
+
+    test('R) titre AR invalide', () {
+      expect(
+        validateUgcPack(_pack(_eleven()).copyWith(titleAr: 'x')),
+        contains('invalid-title'),
+      );
+    });
+
+    test('S) prompt/réponse AR invalides', () {
+      final bad = _eleven();
+      bad[2] = _q(promptAr: '', answerAr: '');
+      final errors = validateUgcPack(_pack(bad));
+      expect(errors.any((e) => e.startsWith('invalid-question:')), isTrue);
+      expect(errors.any((e) => e.startsWith('invalid-answer:')), isTrue);
+    });
+
+    test('T) alias AR : nombre + longueur', () {
+      final many = _eleven();
+      many[0] = _q(aliasesAr: List.filled(21, 'x'));
+      expect(
+        validateUgcPack(_pack(many))
+            .any((e) => e.startsWith('too-many-aliases:')),
+        isTrue,
+      );
+      final long = _eleven();
+      long[0] = _q(
+          aliasesAr: [List.filled(101, 'x').join()]);
+      expect(
+        validateUgcPack(_pack(long))
+            .any((e) => e.startsWith('invalid-aliases:')),
+        isTrue,
+      );
+    });
+
+    test('U) réponse AR numérique force exact', () {
+      expect(
+        effectiveMatchMode(
+            answerFr: 'Année',
+            answerEn: 'Year',
+            answerAr: '١٩٨٤',
+            selected: 'fuzzy'),
+        'exact',
+      );
+    });
+
+    test('V) chiffres persans forcent exact', () {
+      expect(
+        effectiveMatchMode(
+            answerFr: 'Année',
+            answerEn: 'Year',
+            answerAr: '۱۹۸۴',
+            selected: 'fuzzy'),
+        'exact',
+      );
+      expect(
+        effectiveMatchMode(
+            answerFr: 'Paris', answerEn: 'Paris', selected: 'fuzzy'),
+        'fuzzy',
+      );
     });
   });
 }

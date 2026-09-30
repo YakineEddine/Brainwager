@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import 'pack_providers.dart';
 import 'ugc_draft.dart';
 import 'ugc_repository.dart';
+import '../../core/utils/arabic_text.dart' show isNumericAnswer;
 
 /// Route d'édition pour un pack existant (l'URL devient l'autorité :
 /// refresh rouvre l'éditeur, jamais un formulaire création vierge).
@@ -47,10 +48,13 @@ class EditorSavedFlag {
 class _QuestionForm {
   final TextEditingController promptFr = TextEditingController();
   final TextEditingController promptEn = TextEditingController();
+  final TextEditingController promptAr = TextEditingController();
   final TextEditingController answerFr = TextEditingController();
   final TextEditingController answerEn = TextEditingController();
+  final TextEditingController answerAr = TextEditingController();
   final TextEditingController aliasesFr = TextEditingController();
   final TextEditingController aliasesEn = TextEditingController();
+  final TextEditingController aliasesAr = TextEditingController();
   final TextEditingController category = TextEditingController();
   int difficulty = 1;
   String matchMode = 'fuzzy';
@@ -61,10 +65,13 @@ class _QuestionForm {
     final f = _QuestionForm();
     f.promptFr.text = d.promptFr;
     f.promptEn.text = d.promptEn;
+    f.promptAr.text = d.promptAr;
     f.answerFr.text = d.answerMainFr;
     f.answerEn.text = d.answerMainEn;
+    f.answerAr.text = d.answerMainAr;
     f.aliasesFr.text = aliasesToLines(d.aliasesFr);
     f.aliasesEn.text = aliasesToLines(d.aliasesEn);
+    f.aliasesAr.text = aliasesToLines(d.aliasesAr);
     f.category.text = d.category;
     f.difficulty = d.difficulty;
     f.matchMode = d.matchMode;
@@ -75,10 +82,13 @@ class _QuestionForm {
     return UgcQuestionDraft(
       promptFr: promptFr.text,
       promptEn: promptEn.text,
+      promptAr: promptAr.text,
       answerMainFr: answerFr.text,
       answerMainEn: answerEn.text,
+      answerMainAr: answerAr.text,
       aliasesFr: parseAliasesLines(aliasesFr.text),
       aliasesEn: parseAliasesLines(aliasesEn.text),
+      aliasesAr: parseAliasesLines(aliasesAr.text),
       category:
           category.text.trim().isEmpty ? 'general' : category.text.trim(),
       difficulty: difficulty,
@@ -89,10 +99,13 @@ class _QuestionForm {
   void dispose() {
     promptFr.dispose();
     promptEn.dispose();
+    promptAr.dispose();
     answerFr.dispose();
     answerEn.dispose();
+    answerAr.dispose();
     aliasesFr.dispose();
     aliasesEn.dispose();
+    aliasesAr.dispose();
     category.dispose();
   }
 }
@@ -109,8 +122,10 @@ class UgcEditorScreen extends ConsumerStatefulWidget {
 class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
   final _titleFr = TextEditingController();
   final _titleEn = TextEditingController();
+  final _titleAr = TextEditingController();
   final _descFr = TextEditingController();
   final _descEn = TextEditingController();
+  final _descAr = TextEditingController();
   List<_QuestionForm> _forms =
       List.generate(11, (_) => _QuestionForm());
   bool _termsAccepted = false;
@@ -145,8 +160,10 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
   void dispose() {
     _titleFr.dispose();
     _titleEn.dispose();
+    _titleAr.dispose();
     _descFr.dispose();
     _descEn.dispose();
+    _descAr.dispose();
     for (final f in _forms) {
       f.dispose();
     }
@@ -169,8 +186,10 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
       setState(() {
         _titleFr.text = draft.titleFr;
         _titleEn.text = draft.titleEn;
+        _titleAr.text = draft.titleAr;
         _descFr.text = draft.descFr;
         _descEn.text = draft.descEn;
+        _descAr.text = draft.descAr;
         _forms = [for (final q in draft.questions) _QuestionForm.fromDraft(q)];
         _shareCode = draft.shareCode;
         _loading = false;
@@ -189,8 +208,10 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
     return UgcPackDraft(
       titleFr: _titleFr.text,
       titleEn: _titleEn.text,
+      titleAr: _titleAr.text,
       descFr: _descFr.text,
       descEn: _descEn.text,
+      descAr: _descAr.text,
       questions: [for (final f in _forms) f.toDraft()],
     );
   }
@@ -342,25 +363,45 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
                       controller: _titleFr,
                       enabled: mutationEnabled(saving: _saving),
                       onChanged: (_) => _markDirty(),
+                      textDirection: TextDirection.ltr,
                       decoration: InputDecoration(labelText: l10n.editorTitleFr),
                     ),
                     TextField(
                       controller: _titleEn,
                       enabled: mutationEnabled(saving: _saving),
                       onChanged: (_) => _markDirty(),
+                      textDirection: TextDirection.ltr,
                       decoration: InputDecoration(labelText: l10n.editorTitleEn),
+                    ),
+                    TextField(
+                      controller: _titleAr,
+                      enabled: mutationEnabled(saving: _saving),
+                      onChanged: (_) => _markDirty(),
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.right,
+                      decoration: InputDecoration(labelText: l10n.editorTitleAr),
                     ),
                     TextField(
                       controller: _descFr,
                       enabled: mutationEnabled(saving: _saving),
                       onChanged: (_) => _markDirty(),
+                      textDirection: TextDirection.ltr,
                       decoration: InputDecoration(labelText: l10n.editorDescFr),
                     ),
                     TextField(
                       controller: _descEn,
                       enabled: mutationEnabled(saving: _saving),
                       onChanged: (_) => _markDirty(),
+                      textDirection: TextDirection.ltr,
                       decoration: InputDecoration(labelText: l10n.editorDescEn),
+                    ),
+                    TextField(
+                      controller: _descAr,
+                      enabled: mutationEnabled(saving: _saving),
+                      onChanged: (_) => _markDirty(),
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.right,
+                      decoration: InputDecoration(labelText: l10n.editorDescAr),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -477,16 +518,22 @@ class _QuestionCardState extends State<_QuestionCard> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final f = widget.form;
-    // Note visible : les réponses numériques sont évaluées en exact,
-    // même si fuzzy est sélectionné (le serveur tranche de toute façon).
+    // Note visible : les réponses numériques (FR/EN/AR) sont évaluées en
+    // exact, même si fuzzy est sélectionné (le serveur tranche aussi).
     final numeric = isNumericAnswer(f.answerFr.text) ||
-        isNumericAnswer(f.answerEn.text);
+        isNumericAnswer(f.answerEn.text) ||
+        isNumericAnswer(f.answerAr.text);
     Widget field(TextEditingController c, String label,
-        {int lines = 1, bool liveNumeric = false}) {
+        {int lines = 1,
+        bool liveNumeric = false,
+        TextDirection direction = TextDirection.ltr,
+        TextAlign align = TextAlign.left}) {
       return TextField(
         controller: c,
         maxLines: lines,
         enabled: widget.enabled,
+        textDirection: direction,
+        textAlign: align,
         decoration: InputDecoration(labelText: label),
         onChanged: (_) {
           widget.onChanged();
@@ -507,10 +554,30 @@ class _QuestionCardState extends State<_QuestionCard> {
               children: [
                 field(f.promptFr, l10n.editorQuestionFr),
                 field(f.promptEn, l10n.editorQuestionEn),
+                field(
+                  f.promptAr,
+                  l10n.editorQuestionAr,
+                  direction: TextDirection.rtl,
+                  align: TextAlign.right,
+                ),
                 field(f.answerFr, l10n.editorAnswerFr, liveNumeric: true),
                 field(f.answerEn, l10n.editorAnswerEn, liveNumeric: true),
+                field(
+                  f.answerAr,
+                  l10n.editorAnswerAr,
+                  liveNumeric: true,
+                  direction: TextDirection.rtl,
+                  align: TextAlign.right,
+                ),
                 field(f.aliasesFr, l10n.editorAliasesFr, lines: 2),
                 field(f.aliasesEn, l10n.editorAliasesEn, lines: 2),
+                field(
+                  f.aliasesAr,
+                  l10n.editorAliasesAr,
+                  lines: 2,
+                  direction: TextDirection.rtl,
+                  align: TextAlign.right,
+                ),
                 field(f.category, l10n.editorCategory),
                 Row(
                   children: [

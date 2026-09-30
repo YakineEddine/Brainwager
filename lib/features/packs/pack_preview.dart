@@ -5,6 +5,7 @@ class PackPreviewQuestion {
   final int idx;
   final String promptFr;
   final String promptEn;
+  final String promptAr;
   final String category;
   final int difficulty;
   final String? matchMode;
@@ -13,13 +14,22 @@ class PackPreviewQuestion {
     required this.idx,
     required this.promptFr,
     required this.promptEn,
+    required this.promptAr,
     required this.category,
     required this.difficulty,
     required this.matchMode,
   });
 
-  String localizedPrompt(String languageCode) =>
-      languageCode == 'en' ? promptEn : promptFr;
+  /// Énoncé localisé, repli FR si l'arabe est vide.
+  String localizedPrompt(String languageCode) {
+    final localized = languageCode == 'en'
+        ? promptEn
+        : languageCode == 'ar'
+            ? promptAr
+            : promptFr;
+    if (localized.trim().isNotEmpty) return localized;
+    return promptFr;
+  }
 }
 
 /// Parse défensif des lignes RPC (liste JSON). Les lignes incomplètes
@@ -37,6 +47,7 @@ List<PackPreviewQuestion> parsePackPreview(List<dynamic> rows) {
       idx: idx,
       promptFr: fr,
       promptEn: en,
+      promptAr: (m['prompt_ar'] as String?) ?? '',
       category: (m['category'] as String?) ?? 'general',
       difficulty: (m['difficulty'] as int?) ?? 1,
       matchMode: m['match_mode'] as String?,
