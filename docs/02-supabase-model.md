@@ -36,7 +36,7 @@ packs 1──* pack_reports               profiles 1──* entitlements
 - `id uuid PK`, `owner_id uuid → profiles (NULL si officiel)`,
   `title_fr / title_en text NOT NULL`, `desc_fr / desc_en text`,
   `is_official bool DEFAULT false`, `is_premium bool DEFAULT false`,
-  `price_sku text NULL`, `share_code text UNIQUE (6 chars)`,
+  `price_sku text NULL`, `share_code text UNIQUE`,
   `report_count int DEFAULT 0`, `is_hidden bool DEFAULT false`,
   `ugc_terms_accepted_at timestamptz NULL` (CGU UGC, horodatée serveur),
   `created_at`.
@@ -46,8 +46,10 @@ packs 1──* pack_reports               profiles 1──* entitlements
   `authenticated`, aucun droit table (migration 0011). Tout passe par les RPC
   `create_ugc_pack` / `update_ugc_pack` (CGU acceptées obligatoires).
 - Invariants UGC (contraintes CHECK, officiels exemptés) : toujours
-  non-officiel ET non-premium (`price_sku` NULL) ; code `PK-XXXX`
+  non-officiel ET non-premium (`price_sku` NULL) ; code exactement `PK-XXXX`
   (`^PK-[A-Z0-9]{4}$`) ; CGU acceptées (`ugc_terms_accepted_at NOT NULL`).
+  Les codes des packs officiels/historiques ne sont pas soumis au format
+  `PK-XXXX` (contrainte UGC uniquement).
 - UGC v1 : aucun upload d'image (`ugc-image-forbidden` côté serveur).
   Signalement via RPC `report_pack` (raison 3..500, pas d'auto-signalement,
   `report_count` incrémenté au premier signalement uniquement ; doublon =
@@ -149,7 +151,13 @@ packs 1──* pack_reports               profiles 1──* entitlements
 ### pack_reports
 - `id uuid PK`, `pack_id uuid → packs`, `reporter_id uuid`, `reason text`,
   `created_at`, `UNIQUE(pack_id, reporter_id)`.
-- RLS : `INSERT` authentifié, lecture owner + service. Seuil → `is_hidden = true`.
+- RLS : lecture reporter + owner du pack (policies existantes). **Aucune
+  écriture directe** : `INSERT` authentifié révoqué (migration 0011).
+  Signalements uniquement via `report_pack(...)` : un par couple
+  (pack, reporter) ; premier signalement incrémente `report_count`,
+  doublon = motif/horodatage mis à jour sans incrément ; auto-signalement
+  refusé (`cannot-report-own-pack`). Aucun seuil automatique
+  `report_count → is_hidden` : modération manuelle / travail futur.
 
 ## 2. RPC `security definer`
 
@@ -160,7 +168,7 @@ packs 1──* pack_reports               profiles 1──* entitlements
 | `join_game(p_code, p_nickname, p_team_id?)` | ajoute player (reprise idempotente si déjà membre) | statut `lobby` pour les nouveaux, pseudo unique + filtre **serveur** (pas client-only), team existe, plafond 50 |
 | `start_game()` / `open_question(p_idx)` | statut + `question_opened_at = now()` | hôte uniquement |
 | `get_current_question(p_game)` | retourne position, prompt dans `games.language`, image, `match_mode`, `duration`, `opened_at` — sans réponses | membre uniquement ; question courante seulement |
-| `get_pack_preview(p_pack)` | 3 exemples d'un pack officiel | respecte `is_hidden` ; jamais la liste complète |
+| `get_pack_preview(p_pack)` | aperçu pack sans réponses | officiel → max 3 énoncés ; UGC du propriétaire → tous les énoncés + métadonnées ; jamais réponses/alias ; pack masqué refusé ; UGC non possédé refusé |
 | `submit_answer(p_game, p_idx, p_text, p_wager)` | upsert answer + wager | statut open, timer OK, wager valide ; `wager-already-used` émis uniquement pour l'index unique normal (montants 1..10) |
 | `lock_question(p_game)` | `open → locked` + correction auto, idempotente | hôte **ou tout membre si `now() >= opened_at + duration − 2 s`** ; rejouée sans effet |
 | `reveal_answer(p_game)` | retourne réponse + transition `locked → reveal/final_reveal` | transition réservée à l'hôte ; lecture ensuite ouverte aux membres ; sinon exception |
