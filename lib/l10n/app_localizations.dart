@@ -181,6 +181,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Final question — wager 0, 10 or 20'**
   String get finalWagerTitle;
+
+  /// No description provided for @packOfficial.
+  ///
+  /// In en, this message translates to:
+  /// **'Official'**
+  String get packOfficial;
+
+  /// No description provided for @packMine.
+  ///
+  /// In en, this message translates to:
+  /// **'My pack'**
+  String get packMine;
+
+  /// No description provided for @packPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium'**
+  String get packPremium;
+
+  /// No description provided for @packLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked'**
+  String get packLocked;
+
+  /// No description provided for @packComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get packComingSoon;
+
+  /// No description provided for @packRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get packRetry;
+
+  /// No description provided for @packLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load'**
+  String get packLoadError;
+
+  /// No description provided for @packEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No packs available'**
+  String get packEmpty;
+
+  /// No description provided for @packChoosePack.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a pack'**
+  String get packChoosePack;
+
+  /// No description provided for @packNoAccessiblePack.
+  ///
+  /// In en, this message translates to:
+  /// **'No accessible pack to create a game'**
+  String get packNoAccessiblePack;
+
+  /// No description provided for @packPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get packPreview;
 }
 
 class _AppLocalizationsDelegate

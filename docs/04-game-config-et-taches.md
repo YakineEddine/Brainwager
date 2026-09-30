@@ -71,6 +71,9 @@ originales maison), preview 3 pour officiels, éditeur UGC v1 **sans image** +
 CGU + partage `PK-XXXX` + deep link + signalement/blocage.
 Actions TOI : relire 10 questions si tu veux un pack perso.
 Test : créer pack → share code → import sur 2ᵉ appareil.
+Progrès Phase 3A (catalogue/détail/sélection implémentés, anti-triche via
+`get_pack_preview`, premium verrouillé sans achat) ; reste Phase 3B+ :
+éditeur, partage, achats, packs de production.
 
 ### Phase 4 — Équipes, TV, correction manuelle, podium
 Livrables : `team_mode` avec scoring somme/moyenne (moyenne défaut),

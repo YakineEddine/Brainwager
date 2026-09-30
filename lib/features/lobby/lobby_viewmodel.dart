@@ -1,6 +1,5 @@
-// Session de partie Phase 2B : create/join/restore via RPC + lignes RLS.
-// Pack démo DEMO01 (sélecteur Phase 3 plus tard). Les constructeurs purs
-// ci-dessous sont testés sans Supabase ; les méthodes ne font que l'IO.
+// Session de partie Phase 3A : create (pack choisi) / join / restore.
+// Pack démo hardcodé supprimé : CreateScreen fournit un packId du catalogue.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/supabase_client.dart';
 import '../../core/utils/profanity_filter.dart';
@@ -79,30 +78,38 @@ GameSession buildRestoredSession({
   );
 }
 
+/// Paramètres create_game (pur, testé) : pack choisi, options Phase 2
+/// figées (contrôles équipe/langue/durée = tickets séparés).
+Map<String, dynamic> buildCreateGameParams({
+  required String packId,
+  required String nickname,
+}) {
+  return {
+    'p_pack_id': packId,
+    'p_nickname': nickname,
+    'p_team_mode': false,
+    'p_language': 'fr',
+    'p_duration': 30,
+  };
+}
+
 class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
   @override
   AsyncValue<GameSession?> build() => const AsyncValue.data(null);
 
-  Future<GameSession> createGame({required String nickname}) async {
+  Future<GameSession> createGame({
+    required String nickname,
+    required String packId,
+  }) async {
     final n = nickname.trim();
     if (!isNicknameClean(n)) throw Exception('pseudo-invalide');
+    if (packId.isEmpty) throw Exception('pack-manquant');
     state = const AsyncValue.loading();
     try {
-      final c = supa();
-      // Pack démo Phase 2 (seed_demo_pack.sql). Phase 3 : choix du pack.
-      final pack = await c
-          .from('packs')
-          .select('id')
-          .eq('share_code', 'DEMO01')
-          .limit(1)
-          .single();
-      final res = await c.rpc('create_game', params: {
-        'p_pack_id': (pack as Map)['id'],
-        'p_nickname': n,
-        'p_team_mode': false,
-        'p_language': 'fr',
-        'p_duration': 30,
-      });
+      final res = await supa().rpc(
+        'create_game',
+        params: buildCreateGameParams(packId: packId, nickname: n),
+      );
       final full = sessionFromCreateResponse(
         nickname: n,
         res: Map<String, dynamic>.from(res as Map),

@@ -13,5 +13,16 @@
   "nextQuestion": "Question suivante",
   "lockAnswers": "Verrouiller les réponses",
   "revealAnswer": "Révéler la réponse",
-  "finalWagerTitle": "Question finale — mise 0, 10 ou 20"
+  "finalWagerTitle": "Question finale — mise 0, 10 ou 20",
+  "packOfficial": "Officiel",
+  "packMine": "Mon pack",
+  "packPremium": "Premium",
+  "packLocked": "Verrouillé",
+  "packComingSoon": "Disponible bientôt",
+  "packRetry": "Réessayer",
+  "packLoadError": "Chargement impossible",
+  "packEmpty": "Aucun pack disponible",
+  "packChoosePack": "Choisir un pack",
+  "packNoAccessiblePack": "Aucun pack accessible pour créer une partie",
+  "packPreview": "Aperçu"
 }

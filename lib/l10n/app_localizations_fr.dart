@@ -50,4 +50,38 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get finalWagerTitle => 'Question finale — mise 0, 10 ou 20';
+
+  @override
+  String get packOfficial => 'Officiel';
+
+  @override
+  String get packMine => 'Mon pack';
+
+  @override
+  String get packPremium => 'Premium';
+
+  @override
+  String get packLocked => 'Verrouillé';
+
+  @override
+  String get packComingSoon => 'Disponible bientôt';
+
+  @override
+  String get packRetry => 'Réessayer';
+
+  @override
+  String get packLoadError => 'Chargement impossible';
+
+  @override
+  String get packEmpty => 'Aucun pack disponible';
+
+  @override
+  String get packChoosePack => 'Choisir un pack';
+
+  @override
+  String get packNoAccessiblePack =>
+      'Aucun pack accessible pour créer une partie';
+
+  @override
+  String get packPreview => 'Aperçu';
 }

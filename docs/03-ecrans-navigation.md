@@ -64,3 +64,15 @@ avant `pop`. Verrouillage possible par tout membre après expiration (même RPC)
 Bannière : home, packs, shop, settings uniquement. Interstitiel : après podium.
 Rewarded : débloquer 1 pack 24 h. UMP avant première pub (UE).
 `remove_ads` (via `entitlements`) supprime bannières + interstitiels.
+
+## 6. Phase 3A — implémenté (catalogue/sélection)
+
+- `/packs` : catalogue (métadonnées seules, badges Officiel/Mon pack/Premium/
+  Verrouillé, retry/erreur/vide).
+- `/packs/:id` : détail + aperçu via `get_pack_preview` uniquement
+  (jamais de réponses) ; premium verrouillé = métadonnées + « Disponible
+  bientôt », sans achat.
+- Create : sélecteur de pack réel (premium verrouillé désactivé, défaut =
+  premier accessible) ; plus de pack hardcodé.
+- NON terminé : éditeur UGC, partage par code/deep links, achats,
+  5 packs officiels de production.

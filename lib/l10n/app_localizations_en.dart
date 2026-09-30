@@ -50,4 +50,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get finalWagerTitle => 'Final question — wager 0, 10 or 20';
+
+  @override
+  String get packOfficial => 'Official';
+
+  @override
+  String get packMine => 'My pack';
+
+  @override
+  String get packPremium => 'Premium';
+
+  @override
+  String get packLocked => 'Locked';
+
+  @override
+  String get packComingSoon => 'Coming soon';
+
+  @override
+  String get packRetry => 'Retry';
+
+  @override
+  String get packLoadError => 'Could not load';
+
+  @override
+  String get packEmpty => 'No packs available';
+
+  @override
+  String get packChoosePack => 'Choose a pack';
+
+  @override
+  String get packNoAccessiblePack => 'No accessible pack to create a game';
+
+  @override
+  String get packPreview => 'Preview';
 }

@@ -14,5 +14,16 @@
   "lockAnswers": "Lock answers",
   "revealAnswer": "Reveal answer",
   "finalWagerTitle": "Final question — wager 0, 10 or 20",
-  "@finalWagerTitle": { "description": "Title of final question screen" }
+  "@finalWagerTitle": { "description": "Title of final question screen" },
+  "packOfficial": "Official",
+  "packMine": "My pack",
+  "packPremium": "Premium",
+  "packLocked": "Locked",
+  "packComingSoon": "Coming soon",
+  "packRetry": "Retry",
+  "packLoadError": "Could not load",
+  "packEmpty": "No packs available",
+  "packChoosePack": "Choose a pack",
+  "packNoAccessiblePack": "No accessible pack to create a game",
+  "packPreview": "Preview"
 }
