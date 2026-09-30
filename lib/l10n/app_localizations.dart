@@ -247,6 +247,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Preview'**
   String get packPreview;
+
+  /// No description provided for @packCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a pack'**
+  String get packCreate;
+
+  /// No description provided for @packEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get packEdit;
+
+  /// No description provided for @editorSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get editorSave;
+
+  /// No description provided for @editorSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get editorSaved;
+
+  /// No description provided for @editorTitleFr.
+  ///
+  /// In en, this message translates to:
+  /// **'Title FR'**
+  String get editorTitleFr;
+
+  /// No description provided for @editorTitleEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Title EN'**
+  String get editorTitleEn;
+
+  /// No description provided for @editorDescFr.
+  ///
+  /// In en, this message translates to:
+  /// **'Description FR'**
+  String get editorDescFr;
+
+  /// No description provided for @editorDescEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Description EN'**
+  String get editorDescEn;
+
+  /// No description provided for @editorQuestionFr.
+  ///
+  /// In en, this message translates to:
+  /// **'Question FR'**
+  String get editorQuestionFr;
+
+  /// No description provided for @editorQuestionEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Question EN'**
+  String get editorQuestionEn;
+
+  /// No description provided for @editorAnswerFr.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer FR'**
+  String get editorAnswerFr;
+
+  /// No description provided for @editorAnswerEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer EN'**
+  String get editorAnswerEn;
+
+  /// No description provided for @editorAliasesFr.
+  ///
+  /// In en, this message translates to:
+  /// **'Aliases FR (one per line)'**
+  String get editorAliasesFr;
+
+  /// No description provided for @editorAliasesEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Aliases EN (one per line)'**
+  String get editorAliasesEn;
+
+  /// No description provided for @editorCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get editorCategory;
+
+  /// No description provided for @editorDifficulty.
+  ///
+  /// In en, this message translates to:
+  /// **'Difficulty'**
+  String get editorDifficulty;
+
+  /// No description provided for @editorExact.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact'**
+  String get editorExact;
+
+  /// No description provided for @editorFuzzy.
+  ///
+  /// In en, this message translates to:
+  /// **'Fuzzy'**
+  String get editorFuzzy;
+
+  /// No description provided for @editorNumericExactNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Numeric answers are evaluated exactly.'**
+  String get editorNumericExactNote;
+
+  /// No description provided for @editorAddQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Add question'**
+  String get editorAddQuestion;
+
+  /// No description provided for @editorRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get editorRemove;
+
+  /// No description provided for @editorMoveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move up'**
+  String get editorMoveUp;
+
+  /// No description provided for @editorMoveDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move down'**
+  String get editorMoveDown;
+
+  /// No description provided for @editorTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'I accept the content creation terms'**
+  String get editorTerms;
+
+  /// No description provided for @editorTermsAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms already accepted'**
+  String get editorTermsAccepted;
+
+  /// No description provided for @editorShareCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Share code'**
+  String get editorShareCode;
+
+  /// No description provided for @editorCopyCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy code'**
+  String get editorCopyCode;
+
+  /// No description provided for @editorCodeCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Code copied'**
+  String get editorCodeCopied;
+
+  /// No description provided for @editorFixErrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix the invalid fields'**
+  String get editorFixErrors;
+
+  /// No description provided for @editorQuestions.
+  ///
+  /// In en, this message translates to:
+  /// **'Questions'**
+  String get editorQuestions;
 }
 
 class _AppLocalizationsDelegate

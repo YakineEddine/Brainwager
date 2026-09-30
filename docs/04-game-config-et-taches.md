@@ -79,6 +79,9 @@ modification/lecture-éditeur UGC sécurisées, lookup partage `PK-XXXX`,
 réponses privées protégées, RPC de signalement, écritures DB directes
 révoquées. UI éditeur client / deep-link / import toujours en attente.
 Phase 3 NON terminée.
+Progrès Phase 3C éditeur client implémenté sur l'autorité RPC 0011
+(création/édition, CGU, code serveur, migration d'aucune donnée directe).
+Phase 3 toujours NON complète (import, report UI, achats, packs prod).
 
 ### Phase 4 — Équipes, TV, correction manuelle, podium
 Livrables : `team_mode` avec scoring somme/moyenne (moyenne défaut),

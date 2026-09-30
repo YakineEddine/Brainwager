@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import 'pack.dart';
 import 'pack_providers.dart';
+import 'ugc_draft.dart';
 
 String _lang(BuildContext context) =>
     Localizations.localeOf(context).languageCode;
@@ -19,7 +20,15 @@ class PacksScreen extends ConsumerWidget {
     final catalog = ref.watch(packCatalogProvider);
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.packs)),
+      appBar: AppBar(
+        title: Text(l10n.packs),
+        actions: [
+          TextButton(
+            onPressed: () => context.push('/packs/edit'),
+            child: Text(l10n.packCreate),
+          ),
+        ],
+      ),
       body: catalog.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(
@@ -116,6 +125,10 @@ class PackDetailScreen extends ConsumerWidget {
           final p = pack;
           final locked = !p.isAccessible(c.activeEntitlements);
           final preview = ref.watch(packPreviewProvider(packId));
+          final editable = canEditPack(
+            isOfficial: p.isOfficial,
+            isOwned: p.isOwned,
+          );
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -143,6 +156,13 @@ class PackDetailScreen extends ConsumerWidget {
                       child: Text(l10n.packComingSoon),
                     ),
                   ),
+              ],
+              if (editable) ...[
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => context.push('/packs/edit/${p.id}'),
+                  child: Text(l10n.packEdit),
+                ),
               ],
               const SizedBox(height: 16),
               Text(l10n.packPreview,

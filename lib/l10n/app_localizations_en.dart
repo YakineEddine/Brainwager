@@ -83,4 +83,94 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get packPreview => 'Preview';
+
+  @override
+  String get packCreate => 'Create a pack';
+
+  @override
+  String get packEdit => 'Edit';
+
+  @override
+  String get editorSave => 'Save';
+
+  @override
+  String get editorSaved => 'Saved';
+
+  @override
+  String get editorTitleFr => 'Title FR';
+
+  @override
+  String get editorTitleEn => 'Title EN';
+
+  @override
+  String get editorDescFr => 'Description FR';
+
+  @override
+  String get editorDescEn => 'Description EN';
+
+  @override
+  String get editorQuestionFr => 'Question FR';
+
+  @override
+  String get editorQuestionEn => 'Question EN';
+
+  @override
+  String get editorAnswerFr => 'Answer FR';
+
+  @override
+  String get editorAnswerEn => 'Answer EN';
+
+  @override
+  String get editorAliasesFr => 'Aliases FR (one per line)';
+
+  @override
+  String get editorAliasesEn => 'Aliases EN (one per line)';
+
+  @override
+  String get editorCategory => 'Category';
+
+  @override
+  String get editorDifficulty => 'Difficulty';
+
+  @override
+  String get editorExact => 'Exact';
+
+  @override
+  String get editorFuzzy => 'Fuzzy';
+
+  @override
+  String get editorNumericExactNote => 'Numeric answers are evaluated exactly.';
+
+  @override
+  String get editorAddQuestion => 'Add question';
+
+  @override
+  String get editorRemove => 'Remove';
+
+  @override
+  String get editorMoveUp => 'Move up';
+
+  @override
+  String get editorMoveDown => 'Move down';
+
+  @override
+  String get editorTerms => 'I accept the content creation terms';
+
+  @override
+  String get editorTermsAccepted => 'Terms already accepted';
+
+  @override
+  String get editorShareCode => 'Share code';
+
+  @override
+  String get editorCopyCode => 'Copy code';
+
+  @override
+  String get editorCodeCopied => 'Code copied';
+
+  @override
+  String get editorFixErrors => 'Fix the invalid fields';
+
+  @override
+  String get editorQuestions => 'Questions';
 }

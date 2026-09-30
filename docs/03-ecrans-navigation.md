@@ -74,5 +74,9 @@ Rewarded : débloquer 1 pack 24 h. UMP avant première pub (UE).
   bientôt », sans achat.
 - Create : sélecteur de pack réel (premium verrouillé désactivé, défaut =
   premier accessible) ; plus de pack hardcodé.
-- NON terminé : éditeur UGC, partage par code/deep links, achats,
+- `/packs/edit` + `/packs/edit/:id` (Phase 3C) : éditeur UGC — titres/
+  descriptions bilingues, 11..100 questions (réponses/alias/match mode/
+  difficulté), CGU création, code `PK-XXXX` serveur affiché/copiable,
+  zéro image, écritures uniquement via RPC 0011.
+- NON terminé : import/deep link, report UI, purchases,
   5 packs officiels de production.

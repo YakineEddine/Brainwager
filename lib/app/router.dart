@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/lobby/lobby_screens.dart';
 import '../../features/game_session/game_screen.dart';
 import '../../features/packs/pack_screens.dart';
+import '../../features/packs/ugc_editor_screen.dart';
 
 final brainRouter = GoRouter(
   initialLocation: '/home',
@@ -12,6 +13,17 @@ final brainRouter = GoRouter(
     GoRoute(path: '/create', builder: (_, _) => const CreateScreen()),
     GoRoute(path: '/join', builder: (_, _) => const JoinScreen()),
     GoRoute(path: '/packs', builder: (_, _) => const PacksScreen()),
+    // Statique AVANT le paramètre : /packs/edit ne doit jamais matcher
+    // /packs/:id avec id = "edit".
+    GoRoute(
+      path: '/packs/edit',
+      builder: (_, _) => const UgcEditorScreen(),
+    ),
+    GoRoute(
+      path: '/packs/edit/:id',
+      builder: (_, state) =>
+          UgcEditorScreen(packId: state.pathParameters['id']!),
+    ),
     GoRoute(
       path: '/packs/:id',
       builder: (_, state) =>
