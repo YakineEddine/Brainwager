@@ -1,7 +1,8 @@
 # 02 — Modèle de données Supabase (Phase 0 révisée, implémentation Phase 2)
 
 Conventions : `uuid` PK `gen_random_uuid()`, `timestamptz` UTC (`now()`),
-textes FR/EN dupliqués (`*_fr`, `*_en`). Tout en `public`. RLS activé partout.
+contenus localisés FR / EN / AR (`*_fr`, `*_en`, `*_ar` selon les tables).
+Tout en `public`. RLS activé partout.
 
 ## 1. Schéma (11 tables)
 

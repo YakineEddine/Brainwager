@@ -66,29 +66,21 @@ Test : checklist §6 doc 02 (réponses et futures questions illisibles,
 mises invisibles avant lock, preview = 3, lock/transfer idempotents).
 
 ### Phase 3 — Packs + contenu original + éditeur
-Livrables : 5 packs × 30 Q FR+EN avec alias et `match_mode` (formulations
-originales maison), preview 3 pour officiels, éditeur UGC v1 **sans image** +
-CGU + partage `PK-XXXX` + deep link + signalement/blocage.
+Livrables : 5 packs × 30 Q FR+EN+AR avec alias et `match_mode`
+(formulations originales maison), preview 3 pour officiels, éditeur UGC v1
+**sans image** + CGU + partage `PK-XXXX` + deep link + signalement/blocage.
 Actions TOI : relire 10 questions si tu veux un pack perso.
 Test : créer pack → share code → import sur 2ᵉ appareil.
-Progrès Phase 3A (catalogue/détail/sélection implémentés, anti-triche via
-`get_pack_preview`, premium verrouillé sans achat) ; reste Phase 3B+ :
-éditeur, partage, achats, packs de production.
-Progrès Phase 3B backend authority déployé (migration 0011) : création/
-modification/lecture-éditeur UGC sécurisées, lookup partage `PK-XXXX`,
-réponses privées protégées, RPC de signalement, écritures DB directes
-révoquées. UI éditeur client / deep-link / import toujours en attente.
+Progrès : Phase 3A catalogue/détail/sélection terminée ; Phase 3B autorité
+backend UGC terminée (migration 0011, privilèges existants inchangés :
+aucune lecture directe des réponses, aucune écriture directe, RPC
+authentifiés uniquement) ; Phase 3C éditeur client terminé ;
+backend arabe 0012 terminé (schéma, langue `ar`, normalisation, RPC
+trilingues, DEMO01 arabisé).
+NEXT : UI Flutter arabe / RTL / sélection trilingue éditeur et partie.
+Ensuite toujours en attente : import/deep links, report UI, achats,
+5 packs de production.
 Phase 3 NON terminée.
-Support backend arabe déployé (migration 0012) : champs schéma/contenu
-(`title_ar`, `prompt_ar`, réponses/alias arabes), langue de partie `ar`,
-normalisation/matching arabe serveur, RPC UGC trilingues, backfill arabe
-DEMO01. Privilèges existants inchangés (aucune lecture directe des réponses,
-aucune écriture directe, RPC authentifiés uniquement).
-UI Flutter arabe / RTL toujours en attente (prochain ticket).
-Phase 3 toujours NON complète (import, report UI, achats, packs prod).
-Progrès Phase 3C éditeur client implémenté sur l'autorité RPC 0011
-(création/édition, CGU, code serveur, migration d'aucune donnée directe).
-Phase 3 toujours NON complète (import, report UI, achats, packs prod).
 
 ### Phase 4 — Équipes, TV, correction manuelle, podium
 Livrables : `team_mode` avec scoring somme/moyenne (moyenne défaut),
