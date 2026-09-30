@@ -1229,12 +1229,23 @@ class _GameScreenState extends ConsumerState<GameScreen>
               onPressed: _finish,
               child: Text(l10n.hostFinish),
             ),
-          if (_revealed != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text('${l10n.correctAnswer} $_revealed',
-                  style: Theme.of(context).textTheme.titleMedium),
-            ),
+          if (_revealed case final String revealed)
+            ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(l10n.correctAnswer,
+                    style: Theme.of(context).textTheme.titleMedium),
+              ),
+              // Réponse officielle : direction du CONTENU de jeu (serveur),
+              // pas de la locale UI (UI FR + partie AR => RTL).
+              Text(
+                revealed,
+                style: Theme.of(context).textTheme.titleLarge,
+                textDirection: contentDirection(_gameLang),
+                textAlign:
+                    _gameLang == 'ar' ? TextAlign.right : TextAlign.left,
+              ),
+            ],
         ],
       ),
     );

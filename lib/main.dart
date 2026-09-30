@@ -28,22 +28,37 @@ class BrainwagerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (initError != null) {
+      // Coquille localisée : même en échec d'init, l'arabe device donne
+      // une UI RTL arabe (délégués + locales présents ici aussi).
       return MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Brainwager ne peut pas démarrer.'),
-                  const SizedBox(height: 12),
-                  Text('$initError'),
-                ],
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('fr'),
+          Locale('en'),
+          Locale('ar'),
+        ],
+        home: Builder(builder: (context) {
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(AppLocalizations.of(context)!.bootstrapErrorTitle),
+                    const SizedBox(height: 12),
+                    Text('$initError'),
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        }),
       );
     }
     return MaterialApp.router(

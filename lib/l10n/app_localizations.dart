@@ -645,6 +645,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Aliases AR (one per line)'**
   String get editorAliasesAr;
+
+  /// No description provided for @bootstrapErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Brainwager could not start.'**
+  String get bootstrapErrorTitle;
 }
 
 class _AppLocalizationsDelegate

@@ -90,5 +90,6 @@
   "statusFinalWager": "الرهان الأخير",
   "statusFinalReveal": "الكشف الأخير",
   "statusFinished": "انتهت",
-  "gameLanguage": "لغة اللعبة"
+  "gameLanguage": "لغة اللعبة",
+  "bootstrapErrorTitle": "تعذر تشغيل Brainwager."
 }

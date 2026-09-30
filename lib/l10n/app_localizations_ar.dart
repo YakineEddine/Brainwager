@@ -287,4 +287,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get editorAliasesAr => 'المرادفات بالعربية (واحد في كل سطر)';
+
+  @override
+  String get bootstrapErrorTitle => 'تعذر تشغيل Brainwager.';
 }

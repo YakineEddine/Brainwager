@@ -91,5 +91,6 @@
   "editorDescAr": "Description AR",
   "editorQuestionAr": "Question AR",
   "editorAnswerAr": "Answer AR",
-  "editorAliasesAr": "Aliases AR (one per line)"
+  "editorAliasesAr": "Aliases AR (one per line)",
+  "bootstrapErrorTitle": "Brainwager could not start."
 }

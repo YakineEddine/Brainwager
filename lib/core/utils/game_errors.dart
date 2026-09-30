@@ -1,100 +1,188 @@
 // Messages de jeu conviviaux FR/EN/AR pour les conditions attendues.
 // L'UI n'affiche que ceci ; le détail brut reste dans l'exception (debug).
 // L'appelant transmet Localizations.localeOf(context).languageCode.
+// Messages de jeu conviviaux FR/EN/AR pour les conditions attendues.
+// L'UI n'affiche que ceci ; le détail brut reste dans l'exception (debug).
+// L'appelant transmet Localizations.localeOf(context).languageCode.
+//
+// Correspondance EXACTE sur code discret (jamais de sous-chaîne) :
+// 'pack-premium-locked' ne doit jamais tomber sur le message de 'locked'.
+// On extrait les tokens à tirets du texte brut et on ne retient que les
+// codes connus, du plus spécifique au plus générique.
 String friendlyGameError(Object error, [String languageCode = 'fr']) {
+  final code = _extractGameErrorCode('$error');
+  return _localizedGameError(code, languageCode);
+}
+
+/// Extrait le code d'erreur serveur/client connu, ou null.
+String? _extractGameErrorCode(String text) {
+  const known = {
+    'pseudo-invalide',
+    'pack-manquant',
+    'not-authenticated',
+    'invalid-nickname',
+    'invalid-language',
+    'pack-not-found',
+    'pack-hidden',
+    'pack-not-visible',
+    'pack-premium-locked',
+    'pack-too-small',
+    'pack-language-unavailable',
+    'game-not-found',
+    'game-already-started',
+    'nickname-taken',
+    'game-full',
+    'team-not-found',
+    'not-enough-players',
+    'not-member',
+    'not-host',
+    'not-open',
+    'not-locked',
+    'not-allowed-yet',
+    'locked',
+    'empty-answer',
+    'invalid-final-wager',
+    'invalid-wager',
+    'wager-already-used',
+    'wrong-index',
+    'bad-transition',
+    'session-absente',
+  };
+  for (final m in RegExp(r'[a-z]+(?:-[a-z0-9]+)*').allMatches(text)) {
+    final token = m.group(0)!;
+    if (known.contains(token)) return token;
+  }
+  return null;
+}
+
+String _localizedGameError(String? code, String languageCode) {
   final en = languageCode == 'en';
   final ar = languageCode == 'ar';
-  String fr(String f, String e, String a) => en ? e : ar ? a : f;
-  final s = '$error';
-  if (s.contains('game-not-found')) {
-    return fr('Partie introuvable. Vérifie le code.',
-        'Game not found. Check the code.', 'اللعبة غير موجودة. تحقق من الرمز.');
+  String t(String f, String e, String a) => en ? e : ar ? a : f;
+  switch (code) {
+    case 'pseudo-invalide':
+    case 'invalid-nickname':
+      return t('Pseudo invalide.', 'Invalid nickname.',
+          'الاسم المستعار غير صالح.');
+    case 'pack-manquant':
+      return t('Aucun pack sélectionné.', 'No pack selected.',
+          'لم يتم اختيار أي حزمة.');
+    case 'not-authenticated':
+      return t(
+          'Session perdue : reconnecte-toi.',
+          'Session lost: please sign in again.',
+          'فُقدت الجلسة: سجل الدخول مجددًا.');
+    case 'invalid-language':
+      return t('Langue de partie invalide.', 'Invalid game language.',
+          'لغة اللعبة غير صالحة.');
+    case 'pack-not-found':
+      return t('Pack introuvable.', 'Pack not found.',
+          'الحزمة غير موجودة.');
+    case 'pack-hidden':
+      return t('Ce pack n’est plus disponible.',
+          'This pack is no longer available.', 'هذه الحزمة لم تعد متاحة.');
+    case 'pack-not-visible':
+      return t(
+          'Tu n’as pas accès à ce pack.',
+          'You do not have access to this pack.',
+          'ليس لديك صلاحية الوصول إلى هذه الحزمة.');
+    case 'pack-premium-locked':
+      return t(
+          'Ce pack premium n’est pas débloqué.',
+          'This premium pack is not unlocked.',
+          'لم يتم فتح هذه الحزمة المميزة.');
+    case 'pack-too-small':
+      return t('Pack incomplet : 11 questions minimum.',
+          'Incomplete pack: at least 11 questions.',
+          'الحزمة غير مكتملة: 11 سؤالًا على الأقل.');
+    case 'pack-language-unavailable':
+      return t(
+          'Ce pack n’est pas disponible en arabe.',
+          'This pack is not available in Arabic.',
+          'هذه الحزمة غير متاحة باللغة العربية.');
+    case 'game-not-found':
+      return t('Partie introuvable. Vérifie le code.',
+          'Game not found. Check the code.', 'اللعبة غير موجودة. تحقق من الرمز.');
+    case 'game-already-started':
+      return t('La partie a déjà commencé.', 'The game already started.',
+          'اللعبة بدأت بالفعل.');
+    case 'nickname-taken':
+      return t(
+          'Ce pseudo est déjà pris dans cette partie.',
+          'This nickname is already taken in this game.',
+          'هذا الاسم المستعار مستخدم بالفعل في هذه اللعبة.');
+    case 'game-full':
+      return t(
+          'Partie complète (50 joueurs max).',
+          'Game is full (50 players max).',
+          'اللعبة ممتلئة (50 لاعبًا كحد أقصى).');
+    case 'team-not-found':
+      return t('Équipe introuvable.', 'Team not found.',
+          'الفريق غير موجود.');
+    case 'not-enough-players':
+      return t(
+          'Il faut au moins 2 joueurs pour démarrer.',
+          'At least 2 players are needed to start.',
+          'يلزم لاعبان على الأقل للبدء.');
+    case 'not-member':
+      return t('Tu n’es pas membre de cette partie.',
+          'You are not a member of this game.', 'لست عضوًا في هذه اللعبة.');
+    case 'not-host':
+      return t('Seul l’hôte peut faire ça.', 'Only the host can do that.',
+          'المضيف فقط يمكنه فعل ذلك.');
+    case 'not-open':
+      return t(
+          'Question fermée : attends la suivante.',
+          'Question closed: wait for the next one.',
+          'السؤال مغلق: انتظر التالي.');
+    case 'not-locked':
+      return t(
+          'La question n’est pas encore verrouillée.',
+          'The question is not locked yet.',
+          'السؤال غير مقفل بعد.');
+    case 'not-allowed-yet':
+      return t(
+          'Verrouillage trop tôt : attends la fin du timer.',
+          'Too early to lock: wait for the timer.',
+          'القفل مبكر جدًا: انتظر نهاية المؤقت.');
+    case 'locked':
+      return t('Temps écoulé : question verrouillée.',
+          'Time is up: question locked.', 'انتهى الوقت: السؤال مقفل.');
+    case 'empty-answer':
+      return t('Écris une réponse avant de valider.',
+          'Write an answer before submitting.', 'اكتب إجابة قبل التأكيد.');
+    case 'invalid-final-wager':
+      return t(
+          'Mise finale : 0, 10 ou 20 uniquement.',
+          'Final wager: 0, 10 or 20 only.',
+          'الرهان الأخير: 0 أو 10 أو 20 فقط.');
+    case 'invalid-wager':
+      return t('Mise invalide pour cette question.',
+          'Invalid wager for this question.', 'رهان غير صالح لهذا السؤال.');
+    case 'wager-already-used':
+      return t(
+          'Mise déjà utilisée : choisis-en une autre.',
+          'Wager already used: pick another one.',
+          'الرهان مستخدم بالفعل: اختر رهانًا آخر.');
+    case 'wrong-index':
+      return t('Question périmée : recharge l’état.',
+          'Stale question: reload the state.', 'سؤال قديم: أعد تحميل الحالة.');
+    case 'bad-transition':
+      return t(
+          'Action impossible dans l’état actuel.',
+          'Action not allowed in the current state.',
+          'الإجراء غير ممكن في الحالة الحالية.');
+    case 'session-absente':
+      return t(
+          'Session perdue : rejoins la partie à nouveau.',
+          'Session lost: join the game again.',
+          'فُقدت الجلسة: انضم إلى اللعبة مجددًا.');
+    default:
+      return t(
+          'Erreur réseau ou serveur. Réessaie.',
+          'Network or server error. Try again.',
+          'خطأ في الشبكة أو الخادم. حاول مجددًا.');
   }
-  if (s.contains('game-already-started')) {
-    return fr('La partie a déjà commencé.', 'The game already started.',
-        'اللعبة بدأت بالفعل.');
-  }
-  if (s.contains('nickname-taken')) {
-    return fr(
-        'Ce pseudo est déjà pris dans cette partie.',
-        'This nickname is already taken in this game.',
-        'هذا الاسم المستعار مستخدم بالفعل في هذه اللعبة.');
-  }
-  if (s.contains('game-full')) {
-    return fr('Partie complète (50 joueurs max).',
-        'Game is full (50 players max).', 'اللعبة ممتلئة (50 لاعبًا كحد أقصى).');
-  }
-  if (s.contains('not-enough-players')) {
-    return fr(
-        'Il faut au moins 2 joueurs pour démarrer.',
-        'At least 2 players are needed to start.',
-        'يلزم لاعبان على الأقل للبدء.');
-  }
-  if (s.contains('pack-language-unavailable')) {
-    return fr(
-        'Ce pack n’est pas disponible en arabe.',
-        'This pack is not available in Arabic.',
-        'هذه الحزمة غير متاحة باللغة العربية.');
-  }
-  if (s.contains('not-member')) {
-    return fr('Tu n’es pas membre de cette partie.',
-        'You are not a member of this game.', 'لست عضوًا في هذه اللعبة.');
-  }
-  if (s.contains('not-open')) {
-    return fr('Question fermée : attends la suivante.',
-        'Question closed: wait for the next one.', 'السؤال مغلق: انتظر التالي.');
-  }
-  if (s.contains('not-locked')) {
-    return fr(
-        'La question n’est pas encore verrouillée.',
-        'The question is not locked yet.',
-        'السؤال غير مقفل بعد.');
-  }
-  if (s.contains('not-allowed-yet')) {
-    return fr(
-        'Verrouillage trop tôt : attends la fin du timer.',
-        'Too early to lock: wait for the timer.',
-        'القفل مبكر جدًا: انتظر نهاية المؤقت.');
-  }
-  if (s.contains('locked')) {
-    return fr('Temps écoulé : question verrouillée.',
-        'Time is up: question locked.', 'انتهى الوقت: السؤال مقفل.');
-  }
-  if (s.contains('empty-answer')) {
-    return fr('Écris une réponse avant de valider.',
-        'Write an answer before submitting.', 'اكتب إجابة قبل التأكيد.');
-  }
-  if (s.contains('invalid-final-wager')) {
-    return fr('Mise finale : 0, 10 ou 20 uniquement.',
-        'Final wager: 0, 10 or 20 only.', 'الرهان الأخير: 0 أو 10 أو 20 فقط.');
-  }
-  if (s.contains('invalid-wager')) {
-    return fr('Mise invalide pour cette question.',
-        'Invalid wager for this question.', 'رهان غير صالح لهذا السؤال.');
-  }
-  if (s.contains('wrong-index')) {
-    return fr('Question périmée : recharge l’état.',
-        'Stale question: reload the state.', 'سؤال قديم: أعد تحميل الحالة.');
-  }
-  if (s.contains('bad-transition')) {
-    return fr('Action impossible dans l’état actuel.',
-        'Action not allowed in the current state.',
-        'الإجراء غير ممكن في الحالة الحالية.');
-  }
-  if (s.contains('wager-already-used')) {
-    return fr(
-        'Mise déjà utilisée : choisis-en une autre.',
-        'Wager already used: pick another one.',
-        'الرهان مستخدم بالفعل: اختر رهانًا آخر.');
-  }
-  if (s.contains('session-absente')) {
-    return fr(
-        'Session perdue : rejoins la partie à nouveau.',
-        'Session lost: join the game again.',
-        'فُقدت الجلسة: انضم إلى اللعبة مجددًا.');
-  }
-  return fr('Erreur réseau ou serveur. Réessaie.',
-      'Network or server error. Try again.', 'خطأ في الشبكة أو الخادم. حاول مجددًا.');
 }
 
 /// Messages UGC FR/EN/AR : validation cliente (mêmes codes que le serveur)

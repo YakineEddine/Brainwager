@@ -287,4 +287,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editorAliasesAr => 'Aliases AR (one per line)';
+
+  @override
+  String get bootstrapErrorTitle => 'Brainwager could not start.';
 }
