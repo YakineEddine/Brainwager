@@ -1,5 +1,5 @@
 // Éditeur UGC Phase 3C : création (/packs/edit) + édition (/packs/edit/:id).
-// Uniquement les RPC 0011 (create_ugc_pack / update_ugc_pack /
+// Uniquement les RPC 0012 trilingues (create_ugc_pack / update_ugc_pack /
 // get_ugc_pack_for_edit). Aucune écriture/lecture directe de tables.
 // Pas d'import, pas de deep link : tickets suivants.
 import 'package:flutter/material.dart';

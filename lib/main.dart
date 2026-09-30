@@ -23,7 +23,10 @@ Future<void> main() async {
 
 class BrainwagerApp extends StatelessWidget {
   final Object? initError;
-  const BrainwagerApp({super.key, this.initError});
+
+  /// Forçage de locale optionnel (tests/screenshots) : null = locale device.
+  final Locale? locale;
+  const BrainwagerApp({super.key, this.initError, this.locale});
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +34,7 @@ class BrainwagerApp extends StatelessWidget {
       // Coquille localisée : même en échec d'init, l'arabe device donne
       // une UI RTL arabe (délégués + locales présents ici aussi).
       return MaterialApp(
+        locale: locale,
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
@@ -63,6 +67,7 @@ class BrainwagerApp extends StatelessWidget {
     }
     return MaterialApp.router(
       title: 'Brainwager',
+      locale: locale,
       theme: buildBrainTheme(),
       routerConfig: brainRouter,
       localizationsDelegates: const [

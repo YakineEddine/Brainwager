@@ -1,9 +1,6 @@
 // Messages de jeu conviviaux FR/EN/AR pour les conditions attendues.
 // L'UI n'affiche que ceci ; le détail brut reste dans l'exception (debug).
 // L'appelant transmet Localizations.localeOf(context).languageCode.
-// Messages de jeu conviviaux FR/EN/AR pour les conditions attendues.
-// L'UI n'affiche que ceci ; le détail brut reste dans l'exception (debug).
-// L'appelant transmet Localizations.localeOf(context).languageCode.
 //
 // Correspondance EXACTE sur code discret (jamais de sous-chaîne) :
 // 'pack-premium-locked' ne doit jamais tomber sur le message de 'locked'.

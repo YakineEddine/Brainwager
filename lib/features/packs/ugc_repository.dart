@@ -1,4 +1,4 @@
-// Repository UGC Phase 3C : uniquement les RPC 0011 déployées.
+// Repository UGC Phase 3C : uniquement les RPC 0012 trilingues déployées.
 // Aucune écriture directe (packs/questions/answers) : les policies et
 // droits l'interdisent de toute façon. Lecture réponses/alias seulement
 // via get_ugc_pack_for_edit (propriétaire éditeur).

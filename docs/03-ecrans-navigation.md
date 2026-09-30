@@ -19,7 +19,7 @@
 |---|---|---|---|---|
 | 1 | `/` | Splash | tous | Logo animé, init Supabase/UMP, redirect home |
 | 2 | `/home` | Accueil | tous | Créer / Rejoindre / Packs / Boutique. Bannière AdMob ici OK |
-| 3 | `/create` | Créer partie | hôte | Choix pack, individuel/équipes, langue FR/EN de la partie, durée timer, Créer → code 4–6 |
+| 3 | `/create` | Créer partie | hôte | Choix pack, individuel/équipes, langue FR/EN/AR de la partie, durée timer, Créer → code 4–6 |
 | 4 | `/join` | Rejoindre | joueur | Code + pseudo (filtre gros mots inline), équipe si team_mode |
 | 5 | `/lobby/:code` | Lobby | tous | Liste joueurs (Presence : pastille verte), équipe, hôte lance. Partage code/lien |
 | 6 | `/game/:id/question` | Question joueur | joueur | Énoncé courant via `get_current_question`, champ réponse libre, `WagerChips` (restantes grisées), anneau timer calculé en local depuis `opened_at + offset` |
@@ -30,10 +30,10 @@
 | 11 | `/game/:id/podium` | Podium | tous | Top 3 + confettis + stats (série, gros pari, comeback). Rejouer → interstitiel ici OK |
 | 12 | `/packs` | Packs | tous | Gratuits / premium (cadenas + prix via `entitlements`), recherche, signaler/bloquer |
 | 13 | `/packs/:id` | Détail pack | tous | Pack officiel : **3 exemples uniquement**. Pack UGC : énoncés complets si owner ou code. Acheter / rewarded ad 24 h |
-| 14 | `/packs/edit/:id?` | Éditeur | créateur | Titre FR/EN, questions, alias, `match_mode`, difficulté. UGC v1 : **aucun upload d'image**. Case CGU obligatoire, partage via code/lien |
+| 14 | `/packs/edit/:id?` | Éditeur | créateur | Titres/descriptions/questions/réponses/alias FR/EN/AR (champs AR en RTL). UGC v1 : **aucun upload d'image**. Case CGU obligatoire, partage via code/lien |
 | 15 | `/game/:id/tv` | Mode écran TV | hôte | Question + classement XXL, QR du code, masque les réponses avant reveal |
 | 16 | `/shop` | Boutique | tous | Packs premium, `remove_ads`. Lit `entitlements`, propose restauration des achats. Bannière OK |
-| 17 | `/settings` | Réglages | tous | Langue FR/EN, son, pseudo, confidentialité, CGU, crédits, version |
+| 17 | `/settings` | Réglages | tous | Langue FR/EN/AR (cible produit), son, pseudo, confidentialité, CGU, crédits, version |
 
 Deep links : `brainwager://join/ABC12` et `brainwager://pack/PK-XXXX` (go_router +
 `app_links` en Phase 3).
@@ -72,15 +72,13 @@ Rewarded : débloquer 1 pack 24 h. UMP avant première pub (UE).
 - `/packs/:id` : détail + aperçu via `get_pack_preview` uniquement
   (jamais de réponses) ; premium verrouillé = métadonnées + « Disponible
   bientôt », sans achat.
-- Create : sélecteur de pack réel (premium verrouillé désactivé, défaut =
-  premier accessible) + langue de partie FR/EN/AR explicite (indépendante
-  de la langue UI) ; plus de pack hardcodé.
-- `/create` : sélecteur de pack réel + langue de partie FR/EN/AR explicite
-  (indépendante de la langue UI).
+- `/create` : sélecteur de pack réel (premium verrouillé désactivé,
+  défaut = premier accessible) + sélection trilingue de langue de partie
+  FR/EN/AR (indépendante de la langue UI) ; plus de pack hardcodé.
 - `/packs/edit` + `/packs/edit/:id` (Phase 3C) : éditeur UGC — titres/
   descriptions/questions/réponses/alias trilingues FR/EN/AR (champs AR en
   RTL, champs FR/EN en LTR quelle que soit la locale UI), CGU création,
   code `PK-XXXX` serveur affiché/copiable, zéro image, écritures uniquement
-  via RPC 0011.
+  via l'autorité RPC migration 0012.
 - NON terminé : import/deep link, report UI, purchases,
   5 packs officiels de production.

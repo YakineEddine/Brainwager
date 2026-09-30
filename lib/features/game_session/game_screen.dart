@@ -51,6 +51,40 @@ String gameStatusLabel(AppLocalizations l10n, String status) {
   }
 }
 
+/// Réponse officiellement révélée : libellé UI + réponse affichés
+/// séparément. La réponse suit la direction du CONTENU de jeu (serveur),
+/// pas celle de la locale UI (UI FR + partie AR => réponse RTL).
+class RevealedAnswerView extends StatelessWidget {
+  final String label;
+  final String answer;
+  final String languageCode;
+  const RevealedAnswerView({
+    super.key,
+    required this.label,
+    required this.answer,
+    required this.languageCode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final rtl = contentDirection(languageCode) == TextDirection.rtl;
+    return Column(
+      crossAxisAlignment:
+          rtl ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          answer,
+          style: Theme.of(context).textTheme.titleLarge,
+          textDirection: contentDirection(languageCode),
+          textAlign: rtl ? TextAlign.right : TextAlign.left,
+        ),
+      ],
+    );
+  }
+}
+
 /// Vrai quand l'écran doit afficher l'attente lobby (question encore
 /// illisible : get_current_question lève `not-started` en lobby).
 bool selectsLobbyView({required bool hasQuestion}) => !hasQuestion;
@@ -1230,22 +1264,14 @@ class _GameScreenState extends ConsumerState<GameScreen>
               child: Text(l10n.hostFinish),
             ),
           if (_revealed case final String revealed)
-            ...[
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(l10n.correctAnswer,
-                    style: Theme.of(context).textTheme.titleMedium),
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: RevealedAnswerView(
+                label: l10n.correctAnswer,
+                answer: revealed,
+                languageCode: _gameLang,
               ),
-              // Réponse officielle : direction du CONTENU de jeu (serveur),
-              // pas de la locale UI (UI FR + partie AR => RTL).
-              Text(
-                revealed,
-                style: Theme.of(context).textTheme.titleLarge,
-                textDirection: contentDirection(_gameLang),
-                textAlign:
-                    _gameLang == 'ar' ? TextAlign.right : TextAlign.left,
-              ),
-            ],
+            ),
         ],
       ),
     );

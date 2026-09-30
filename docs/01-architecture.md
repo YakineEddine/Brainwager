@@ -52,7 +52,7 @@ brainwager/
     app/
       router.dart
       theme.dart
-      l10n/                     # app_fr.arb, app_en.arb
+      l10n/                     # app_fr.arb, app_en.arb, app_ar.arb
     core/
       config/
         game_config.dart        # voir doc 04 (team scoring, lock grace, match_mode…)

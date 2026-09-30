@@ -1,5 +1,6 @@
-// Domaine UGC Phase 3C (pur Dart) : brouillons, validation miroir 0011,
-// payloads RPC exacts, opérations de liste. Aucun import Flutter/Supabase.
+// Domaine UGC Phase 3C (pur Dart) : brouillons, validation miroir 0012
+// trilingue, payloads RPC exacts, opérations de liste. Aucun import
+// Flutter/Supabase.
 // La détection numérique utilise le normaliseur partagé du matcher de jeu.
 import '../../core/utils/arabic_text.dart' show isNumericAnswer;
 
@@ -269,7 +270,7 @@ List<UgcQuestionDraft> moveQuestion(
   return out;
 }
 
-/// Validation miroir 0011 : retourne des codes d'erreur ('' = valide).
+/// Validation miroir 0012 trilingue : retourne des codes d'erreur.
 /// Le serveur reste l'autorité ; l'UI bloque Save si non vide.
 List<String> validateUgcPack(UgcPackDraft draft) {
   final errors = <String>[];
