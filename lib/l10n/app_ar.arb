@@ -104,6 +104,7 @@
   "reportReason": "السبب",
   "reportCancel": "إلغاء",
   "reportSend": "إرسال",
+  "reportClose": "إغلاق",
   "packReported": "تم الإبلاغ عن الحزمة",
   "reportUpdated": "تم تحديث البلاغ",
   "invalidShareCode": "رمز غير صالح (بصيغة PK-XXXX)"

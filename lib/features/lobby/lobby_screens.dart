@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/utils/game_errors.dart';
 import '../../l10n/app_localizations.dart';
 import '../packs/pack_providers.dart';
@@ -77,10 +78,13 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
   }
 
   Future<({SharedPack pack, Set<String> entitlements})>? _sharedFutureFor(
-      String? code) {
+    String? code,
+  ) {
     if (code == null || code.isEmpty) return null;
-    final repo = PackRepository();
+    // Repo créé DANS la zone async : sans Supabase, l'erreur part en
+    // Future (branche erreur UI), jamais en throw synchrone d'initState.
     return (() async {
+      final repo = PackRepository();
       final results = await Future.wait([
         repo.lookupSharedPack(code),
         repo.activeEntitlements(),
@@ -103,7 +107,10 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
     final catalog = ref.watch(packCatalogProvider);
     final l10n = AppLocalizations.of(context)!;
     final appLang = Localizations.localeOf(context).languageCode;
-    final lang = _gameLang ?? defaultGameLanguage(appLang);
+    // Langue du CONTENU (sélecteur, indépendante de l'UI) vs langue UI
+    // (messages d'erreur uniquement) : UI FR + partie AR reste AR.
+    final gameLanguage = _gameLang ?? defaultGameLanguage(appLang);
+    final uiLanguage = appLang;
     // Pack effectif : choix utilisateur s'il reste accessible, sinon défaut.
     // Même logique que le sélecteur ci-dessous.
     String? selectedPackId;
@@ -122,6 +129,7 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
         );
       }
     }
+    final shared = widget.sharedCode != null && widget.sharedCode!.isNotEmpty;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.createGame)),
       body: Padding(
@@ -142,62 +150,63 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                 ButtonSegment(value: 'en', label: Text('English')),
                 ButtonSegment(value: 'ar', label: Text('العربية')),
               ],
-              selected: {lang},
-              onSelectionChanged: (s) =>
-                  setState(() => _gameLang = s.first),
+              selected: {gameLanguage},
+              onSelectionChanged: (s) => setState(() => _gameLang = s.first),
             ),
             const SizedBox(height: 12),
-            catalog.when(
-              loading: () => Text(l10n.packChoosePack),
-              error: (_, _) => Row(
-                children: [
-                  Expanded(child: Text(l10n.packLoadError)),
-                  TextButton(
-                    onPressed: () => ref.invalidate(packCatalogProvider),
-                    child: Text(l10n.packRetry),
-                  ),
-                ],
-              ),
-              data: (c) {
-                final selectable =
-                    selectablePacks(c.packs, c.activeEntitlements);
-                if (selectable.isEmpty) {
-                  return Text(l10n.packNoAccessiblePack);
-                }
-                return DropdownButtonFormField<String>(
-                  initialValue: selectedPackId,
-                  decoration:
-                      InputDecoration(labelText: l10n.packChoosePack),
-                  items: [
-                    for (final p in c.packs)
-                      if (!p.isHidden)
-                        DropdownMenuItem<String>(
-                          value: p.id,
-                          enabled: p.isAccessible(c.activeEntitlements),
-                          child: Text(
-                            '${p.localizedTitle(lang)}'
-                            '${p.isAccessible(c.activeEntitlements) ? '' : ' · ${l10n.packLocked}'}',
-                          ),
-                        ),
-                  ],
-                  onChanged: (id) => setState(() => _selectedPackId = id),
-                );
-              },
-            ),
-            // Mode partagé (?share=PK-XXXX) : pack résolu via RPC, jamais
-            // via le catalogue (absent de listPacks). Mode normal : dropdown.
-            if (widget.sharedCode != null &&
-                widget.sharedCode!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _sharedBranch(lang),
+            // Mode partagé : SEULE la branche partagée (jamais le dropdown
+            // catalogue). Mode normal : dropdown + bouton. Le pack partagé
+            // ne dépend pas du catalogue RLS.
+            if (shared) ...[
+              _sharedBranch(gameLanguage),
             ] else ...[
+              catalog.when(
+                loading: () => Text(l10n.packChoosePack),
+                error: (_, _) => Row(
+                  children: [
+                    Expanded(child: Text(l10n.packLoadError)),
+                    TextButton(
+                      onPressed: () => ref.invalidate(packCatalogProvider),
+                      child: Text(l10n.packRetry),
+                    ),
+                  ],
+                ),
+                data: (c) {
+                  final selectable = selectablePacks(
+                    c.packs,
+                    c.activeEntitlements,
+                  );
+                  if (selectable.isEmpty) {
+                    return Text(l10n.packNoAccessiblePack);
+                  }
+                  return DropdownButtonFormField<String>(
+                    initialValue: selectedPackId,
+                    decoration: InputDecoration(labelText: l10n.packChoosePack),
+                    items: [
+                      for (final p in c.packs)
+                        if (!p.isHidden)
+                          DropdownMenuItem<String>(
+                            value: p.id,
+                            enabled: p.isAccessible(c.activeEntitlements),
+                            child: Text(
+                              '${p.localizedTitle(gameLanguage)}'
+                              '${p.isAccessible(c.activeEntitlements) ? '' : ' · ${l10n.packLocked}'}',
+                            ),
+                          ),
+                    ],
+                    onChanged: (id) => setState(() => _selectedPackId = id),
+                  );
+                },
+              ),
               const SizedBox(height: 12),
               _createButton(
-                busy: catalog.isLoading ||
+                busy:
+                    catalog.isLoading ||
                     catalog.hasError ||
                     selectedPackId == null,
                 packId: selectedPackId,
-                lang: lang,
+                gameLanguage: gameLanguage,
+                uiLanguage: uiLanguage,
               ),
             ],
           ],
@@ -207,17 +216,18 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
   }
 
   /// Bouton Créer partagé : catalogue normal OU pack partagé résolu.
-  /// Le flux partagé transmet pack ID + share code (autorité serveur).
+  /// gameLanguage (contenu) et uiLanguage (messages) restent explicites :
+  /// UI FR + العربية sélectionné envoie toujours p_language = ar.
   Widget _createButton({
     required bool busy,
     required String? packId,
-    required String lang,
+    required String gameLanguage,
+    required String uiLanguage,
     String? shareCode,
   }) {
     final lobby = ref.watch(lobbyViewModelProvider);
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final lang = Localizations.localeOf(context).languageCode;
     return ElevatedButton(
       onPressed: lobby.isLoading || busy || packId == null
           ? null
@@ -228,14 +238,14 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                     .createGame(
                       nickname: _pseudo.text,
                       packId: packId,
-                      language: lang,
+                      language: gameLanguage,
                       shareCode: shareCode,
                     );
                 if (!mounted) return;
                 context.go('/game/${s.gameId}');
               } catch (e) {
                 messenger.showSnackBar(
-                  SnackBar(content: Text(friendlyGameError(e, lang))),
+                  SnackBar(content: Text(friendlyGameError(e, uiLanguage))),
                 );
               }
             },
@@ -246,7 +256,7 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
   /// Branche pack partagé (?share=PK-XXXX) : résolu via RPC, jamais via
   /// le catalogue RLS (qui ne le contient pas forcément). Sélecteur
   /// normal masqué ; sortie possible vers /create.
-  Widget _sharedBranch(String lang) {
+  Widget _sharedBranch(String gameLanguage) {
     final l10n = AppLocalizations.of(context)!;
     final future = _sharedFuture;
     if (future == null) return const SizedBox.shrink();
@@ -260,13 +270,17 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
           return Row(
             children: [
               Expanded(
-                child: Text(friendlyUgcError(
+                child: Text(
+                  friendlyUgcError(
                     snap.error ?? Exception('pack-not-found'),
-                    Localizations.localeOf(context).languageCode)),
+                    Localizations.localeOf(context).languageCode,
+                  ),
+                ),
               ),
               TextButton(
                 onPressed: () => setState(
-                    () => _sharedFuture = _sharedFutureFor(widget.sharedCode)),
+                  () => _sharedFuture = _sharedFutureFor(widget.sharedCode),
+                ),
                 child: Text(l10n.packRetry),
               ),
             ],
@@ -274,10 +288,11 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
         }
         final pack = snap.data!.pack;
         final locked = !pack.isAccessible(snap.data!.entitlements);
+        final uiLanguage = Localizations.localeOf(context).languageCode;
         return Column(
           children: [
             ListTile(
-              title: Text(pack.localizedTitle(lang)),
+              title: Text(pack.localizedTitle(gameLanguage)),
               subtitle: Text(
                 '${pack.questionCount} · ${pack.isOfficial ? l10n.packOfficial : l10n.sharedPack}',
               ),
@@ -291,7 +306,8 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
             _createButton(
               busy: locked,
               packId: locked ? null : pack.id,
-              lang: lang,
+              gameLanguage: gameLanguage,
+              uiLanguage: uiLanguage,
               shareCode: locked ? null : pack.shareCode,
             ),
           ],
@@ -359,17 +375,12 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
                       try {
                         final s = await ref
                             .read(lobbyViewModelProvider.notifier)
-                            .joinGame(
-                              code: _code.text,
-                              nickname: _pseudo.text,
-                            );
+                            .joinGame(code: _code.text, nickname: _pseudo.text);
                         if (context.mounted) context.go('/game/${s.gameId}');
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content:
-                                    Text(friendlyGameError(e, lang))),
+                            SnackBar(content: Text(friendlyGameError(e, lang))),
                           );
                         }
                       }

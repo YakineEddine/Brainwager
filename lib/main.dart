@@ -13,6 +13,10 @@ import 'package:brainwager/core/navigation/deep_link_service.dart';
 import 'package:brainwager/core/network/supabase_client.dart';
 import 'package:brainwager/l10n/app_localizations.dart';
 
+/// Instance deep links retenue pour toute la vie de l'app (un seul
+/// abonnement, jamais recréée sur rebuild).
+final deepLinkService = DeepLinkService();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Object? initError;
@@ -22,9 +26,10 @@ Future<void> main() async {
     initError = e;
   }
   runApp(ProviderScope(child: BrainwagerApp(initError: initError)));
-  // Deep links custom scheme (une seule instance, durée de vie app).
-  // Le service ne navigue que via le parseur pur + go_router global.
-  unawaited(DeepLinkService().start(brainRouter.go));
+  // Deep links custom scheme (instance unique retained, durée de vie app).
+  // Seule source : uriLinkStream (inclut l'event initial, pas de double
+  // via getInitialLink). Navigation via go_router global.
+  unawaited(deepLinkService.start(brainRouter.go));
 }
 
 class BrainwagerApp extends StatelessWidget {
@@ -47,28 +52,26 @@ class BrainwagerApp extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [
-          Locale('fr'),
-          Locale('en'),
-          Locale('ar'),
-        ],
-        home: Builder(builder: (context) {
-          return Scaffold(
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(AppLocalizations.of(context)!.bootstrapErrorTitle),
-                    const SizedBox(height: 12),
-                    Text('$initError'),
-                  ],
+        supportedLocales: const [Locale('fr'), Locale('en'), Locale('ar')],
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(AppLocalizations.of(context)!.bootstrapErrorTitle),
+                      const SizedBox(height: 12),
+                      Text('$initError'),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        }),
+            );
+          },
+        ),
       );
     }
     return MaterialApp.router(

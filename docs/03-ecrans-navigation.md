@@ -80,8 +80,6 @@ Rewarded : débloquer 1 pack 24 h. UMP avant première pub (UE).
   RTL, champs FR/EN en LTR quelle que soit la locale UI), CGU création,
   code `PK-XXXX` serveur affiché/copiable, zéro image, écritures uniquement
   via l'autorité RPC migration 0012.
-- NON terminé : import/deep link, report UI, purchases,
-  5 packs officiels de production.
 - Phase 3D (partage) : route manuelle `/packs/import` (saisie PK-XXXX,
   résolution RPC), détail partagé `/packs/shared/:code` (métadonnées +
   prompts RPC, jamais réponses/alias ; créer avec `p_share_code`, signaler
@@ -90,3 +88,4 @@ Rewarded : débloquer 1 pack 24 h. UMP avant première pub (UE).
   Sémantique d'import : lookup + utilisation via RPC uniquement — AUCUNE
   copie, AUCUN changement de propriétaire, AUCUNE persistance locale,
   AUCUN flag "importé".
+- NON terminé : purchases, 5 packs officiels de production.

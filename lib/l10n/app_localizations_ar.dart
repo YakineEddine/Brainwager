@@ -328,6 +328,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportSend => 'إرسال';
 
   @override
+  String get reportClose => 'إغلاق';
+
+  @override
   String get packReported => 'تم الإبلاغ عن الحزمة';
 
   @override

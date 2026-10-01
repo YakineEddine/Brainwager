@@ -53,19 +53,13 @@ const _hidden = PackSummary(
 
 void main() {
   test('H) premier pack accessible sélectionné par défaut', () {
-    expect(
-      defaultSelectedPackId([_locked, _free], {}),
-      'free1',
-    );
+    expect(defaultSelectedPackId([_locked, _free], {}), 'free1');
   });
 
   test('I) premium verrouillé exclu des sélectionnables', () {
     final sel = selectablePacks([_free, _locked], {});
     expect(sel.map((p) => p.id), ['free1']);
-    expect(
-      defaultSelectedPackId([_locked], {'pack_cinema'}),
-      'prem1',
-    );
+    expect(defaultSelectedPackId([_locked], {'pack_cinema'}), 'prem1');
   });
 
   test('J) aucun pack accessible => sélection nulle (Create désactivé)', () {
@@ -75,16 +69,15 @@ void main() {
   });
 
   test('packs masqués exclus défensivement', () {
-    expect(
-      selectablePacks([_hidden, _free], {}).map((p) => p.id),
-      ['free1'],
-    );
+    expect(selectablePacks([_hidden, _free], {}).map((p) => p.id), ['free1']);
   });
 
-  test('K) createGame utilise le packId explicite, sans lookup share_code',
-      () {
+  test('K) createGame utilise le packId explicite, sans lookup share_code', () {
     final params = buildCreateGameParams(
-        packId: 'pid-123', nickname: 'Moi', language: 'fr');
+      packId: 'pid-123',
+      nickname: 'Moi',
+      language: 'fr',
+    );
     expect(params['p_pack_id'], 'pid-123');
     expect(params['p_nickname'], 'Moi');
     expect(params.containsKey('p_share_code'), isFalse);
@@ -95,19 +88,38 @@ void main() {
 
   test('H) flux partagé => p_share_code transmis au serveur', () {
     final params = buildCreateGameParams(
-        packId: 'pid-123',
-        nickname: 'Moi',
-        language: 'ar',
-        shareCode: 'PK-AB12');
+      packId: 'pid-123',
+      nickname: 'Moi',
+      language: 'ar',
+      shareCode: 'PK-AB12',
+    );
     expect(params['p_pack_id'], 'pid-123');
     expect(params['p_share_code'], 'PK-AB12');
     expect(params['p_language'], 'ar');
   });
 
+  test('A/B) langue explicite préservée (UI FR + ar => ar)', () {
+    for (final lang in ['fr', 'en', 'ar']) {
+      final params = buildCreateGameParams(
+        packId: 'p',
+        nickname: 'Moi',
+        language: lang,
+      );
+      expect(
+        params['p_language'],
+        lang,
+        reason: 'UI locale must never override the selected game language',
+      );
+    }
+  });
+
   test('I) buildCreateGameParams envoie p_language explicite', () {
     for (final lang in ['fr', 'en', 'ar']) {
       final params = buildCreateGameParams(
-          packId: 'p', nickname: 'Moi', language: lang);
+        packId: 'p',
+        nickname: 'Moi',
+        language: lang,
+      );
       expect(params['p_language'], lang);
     }
   });

@@ -330,6 +330,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reportSend => 'Envoyer';
 
   @override
+  String get reportClose => 'Fermer';
+
+  @override
   String get packReported => 'Pack signalé';
 
   @override

@@ -26,7 +26,12 @@
             </intent-filter>
             <!-- Deep links custom scheme (pas de domaine vérifié : surtout
                  pas d'autoVerify ici). brainwager://pack/PK-XXXX et
-                 brainwager://join/ABCDE routés côté Flutter via AppLinks. -->
+                 brainwager://join/ABCDE routés côté Flutter via AppLinks.
+                 Handler deep-link natif Flutter désactivé (reco plugin tiers),
+                 AppLinks ci-dessous est la seule source. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>

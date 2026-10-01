@@ -724,6 +724,12 @@ abstract class AppLocalizations {
   /// **'Send'**
   String get reportSend;
 
+  /// No description provided for @reportClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get reportClose;
+
   /// No description provided for @packReported.
   ///
   /// In en, this message translates to:

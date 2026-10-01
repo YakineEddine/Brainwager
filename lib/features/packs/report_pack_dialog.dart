@@ -3,6 +3,7 @@
 // Aucun compteur incrémenté côté client, aucun masquage local.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/utils/game_errors.dart';
 import '../../l10n/app_localizations.dart';
 import 'pack_repository.dart';
@@ -53,8 +54,7 @@ class _ReportPackDialogState extends ConsumerState<ReportPackDialog> {
       _error = null;
     });
     try {
-      final res = await PackRepository()
-          .reportPack(widget.packId, reason);
+      final res = await PackRepository().reportPack(widget.packId, reason);
       if (!mounted) return;
       setState(() {
         _sending = false;
@@ -106,7 +106,7 @@ class _ReportPackDialogState extends ConsumerState<ReportPackDialog> {
         if (_done)
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.reportCancel),
+            child: Text(l10n.reportClose),
           ),
       ],
     );

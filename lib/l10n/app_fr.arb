@@ -104,6 +104,7 @@
   "reportReason": "Motif",
   "reportCancel": "Annuler",
   "reportSend": "Envoyer",
+  "reportClose": "Fermer",
   "packReported": "Pack signalé",
   "reportUpdated": "Signalement mis à jour",
   "invalidShareCode": "Code invalide (format PK-XXXX)"
