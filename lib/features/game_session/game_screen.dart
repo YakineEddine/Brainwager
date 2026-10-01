@@ -13,6 +13,7 @@ import '../../core/network/heartbeat.dart';
 import '../../core/network/supabase_client.dart';
 import '../../core/network/realtime_service.dart';
 import '../../core/utils/clock.dart';
+import '../../core/utils/content_direction.dart';
 import '../../core/utils/game_errors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/countdown_ring.dart';
@@ -21,11 +22,6 @@ import '../game_engine/reveal_policy.dart';
 import '../game_engine/timing.dart';
 import '../game_engine/wager_validator.dart';
 import '../lobby/lobby_viewmodel.dart';
-
-/// Direction du CONTENU de jeu (pure) : langue serveur/question, jamais
-/// la locale UI (une UI FR peut afficher une partie AR et inversement).
-TextDirection contentDirection(String languageCode) =>
-    languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr;
 
 /// Libellé localisé d'un statut serveur (le brut ne s'affiche jamais seul).
 String gameStatusLabel(AppLocalizations l10n, String status) {

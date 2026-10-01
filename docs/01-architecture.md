@@ -133,3 +133,13 @@ Règles d'import : `features/*` ne s'importent jamais entre elles sauf via `core
 
 Projet Flutter + thème + router + i18n FR/EN + `game_engine` pur + tests verts.
 Aucun appel Supabase en Phase 1. Cela verrouille les règles avant le réseau.
+
+## 8. Deep links (Phase 3D, custom scheme, sans domaine vérifié)
+
+- Schéma `brainwager://` enregistré Android (intent-filters VIEW/DEFAULT/
+  BROWSABLE, sans `autoVerify`) : `brainwager://pack/PK-XXXX` et
+  `brainwager://join/ABCDE`, intégrés via package `app_links`
+  (lien initial + flux, service unique démarré dans `main`).
+- Parsing pur (`core/navigation`) : scheme exact, hôte connu, exactement
+  un segment valide ; pack → `/packs/shared/<code>`, join →
+  `/join?code=<code>`. Seul le code transite ; l'écran recharge via RPC.

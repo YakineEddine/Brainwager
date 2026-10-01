@@ -1,12 +1,15 @@
-// Bootstrap Phase 2B : Riverpod + thème + i18n + Supabase (anon).
+// Bootstrap : Riverpod + thème + i18n + Supabase (anon) + deep links.
 // Lancement : --dart-define SUPABASE_URL=... --dart-define SUPABASE_PUBLISHABLE_KEY=...
 // Un échec d'init affiche un écran d'erreur explicite : jamais de démarrage
 // silencieux avec un client Supabase inutilisable.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:brainwager/app/router.dart';
 import 'package:brainwager/app/theme.dart';
+import 'package:brainwager/core/navigation/deep_link_service.dart';
 import 'package:brainwager/core/network/supabase_client.dart';
 import 'package:brainwager/l10n/app_localizations.dart';
 
@@ -19,6 +22,9 @@ Future<void> main() async {
     initError = e;
   }
   runApp(ProviderScope(child: BrainwagerApp(initError: initError)));
+  // Deep links custom scheme (une seule instance, durée de vie app).
+  // Le service ne navigue que via le parseur pur + go_router global.
+  unawaited(DeepLinkService().start(brainRouter.go));
 }
 
 class BrainwagerApp extends StatelessWidget {

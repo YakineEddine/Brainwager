@@ -91,5 +91,20 @@
   "editorQuestionAr": "Question AR",
   "editorAnswerAr": "Réponse AR",
   "editorAliasesAr": "Alias AR (un par ligne)",
-  "bootstrapErrorTitle": "Brainwager ne peut pas démarrer."
+  "bootstrapErrorTitle": "Brainwager ne peut pas démarrer.",
+  "packImport": "Importer un pack",
+  "packShareCode": "Code de partage",
+  "packOpen": "Ouvrir",
+  "sharedPack": "Pack partagé",
+  "packCreateWith": "Créer une partie avec ce pack",
+  "copyShareLink": "Copier le lien",
+  "linkCopied": "Lien copié",
+  "packReport": "Signaler",
+  "reportPackTitle": "Signaler le pack",
+  "reportReason": "Motif",
+  "reportCancel": "Annuler",
+  "reportSend": "Envoyer",
+  "packReported": "Pack signalé",
+  "reportUpdated": "Signalement mis à jour",
+  "invalidShareCode": "Code invalide (format PK-XXXX)"
 }

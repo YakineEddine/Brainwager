@@ -281,6 +281,21 @@ String friendlyUgcError(Object error, String languageCode) {
           'Ce pack n’est pas disponible en arabe.',
           'This pack is not available in Arabic.',
           'هذه الحزمة غير متاحة باللغة العربية.');
+    case 'invalid-report-reason':
+      return t(
+          'Le motif doit contenir entre 3 et 500 caractères.',
+          'The reason must contain between 3 and 500 characters.',
+          'يجب أن يحتوي السبب على ما بين 3 و500 حرف.');
+    case 'cannot-report-own-pack':
+      return t(
+          'Tu ne peux pas signaler ton propre pack.',
+          'You cannot report your own pack.',
+          'لا يمكنك الإبلاغ عن حزمتك الخاصة.');
+    case 'invalid-share-code':
+      return t(
+          'Code invalide (format PK-XXXX).',
+          'Invalid code (PK-XXXX format).',
+          'رمز غير صالح (بصيغة PK-XXXX).');
     default:
       return t('Erreur réseau ou serveur. Réessaie.',
           'Network or server error. Try again.', 'خطأ في الشبكة أو الخادم. حاول مجددًا.');

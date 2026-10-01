@@ -651,6 +651,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Brainwager could not start.'**
   String get bootstrapErrorTitle;
+
+  /// No description provided for @packImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a pack'**
+  String get packImport;
+
+  /// No description provided for @packShareCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Share code'**
+  String get packShareCode;
+
+  /// No description provided for @packOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get packOpen;
+
+  /// No description provided for @sharedPack.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared pack'**
+  String get sharedPack;
+
+  /// No description provided for @packCreateWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a game with this pack'**
+  String get packCreateWith;
+
+  /// No description provided for @copyShareLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get copyShareLink;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get linkCopied;
+
+  /// No description provided for @packReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get packReport;
+
+  /// No description provided for @reportPackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report pack'**
+  String get reportPackTitle;
+
+  /// No description provided for @reportReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get reportReason;
+
+  /// No description provided for @reportCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get reportCancel;
+
+  /// No description provided for @reportSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get reportSend;
+
+  /// No description provided for @packReported.
+  ///
+  /// In en, this message translates to:
+  /// **'Pack reported'**
+  String get packReported;
+
+  /// No description provided for @reportUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Report updated'**
+  String get reportUpdated;
+
+  /// No description provided for @invalidShareCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid code (PK-XXXX format)'**
+  String get invalidShareCode;
 }
 
 class _AppLocalizationsDelegate

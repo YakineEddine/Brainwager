@@ -290,4 +290,49 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bootstrapErrorTitle => 'تعذر تشغيل Brainwager.';
+
+  @override
+  String get packImport => 'استيراد حزمة';
+
+  @override
+  String get packShareCode => 'رمز المشاركة';
+
+  @override
+  String get packOpen => 'فتح';
+
+  @override
+  String get sharedPack => 'حزمة مشتركة';
+
+  @override
+  String get packCreateWith => 'إنشاء لعبة بهذه الحزمة';
+
+  @override
+  String get copyShareLink => 'نسخ الرابط';
+
+  @override
+  String get linkCopied => 'تم نسخ الرابط';
+
+  @override
+  String get packReport => 'الإبلاغ';
+
+  @override
+  String get reportPackTitle => 'الإبلاغ عن الحزمة';
+
+  @override
+  String get reportReason => 'السبب';
+
+  @override
+  String get reportCancel => 'إلغاء';
+
+  @override
+  String get reportSend => 'إرسال';
+
+  @override
+  String get packReported => 'تم الإبلاغ عن الحزمة';
+
+  @override
+  String get reportUpdated => 'تم تحديث البلاغ';
+
+  @override
+  String get invalidShareCode => 'رمز غير صالح (بصيغة PK-XXXX)';
 }

@@ -79,11 +79,13 @@ GameSession buildRestoredSession({
 }
 
 /// Paramètres create_game (pur, testé) : pack + langue choisis, options
-/// Phase 2 figées (contrôles équipe/durée = tickets séparés).
+/// Phase 2 figées. shareCode (optionnel) : transmis tel quel au serveur
+/// pour les packs partagés (jamais autorisé côté client uniquement).
 Map<String, dynamic> buildCreateGameParams({
   required String packId,
   required String nickname,
   required String language,
+  String? shareCode,
 }) {
   return {
     'p_pack_id': packId,
@@ -91,6 +93,8 @@ Map<String, dynamic> buildCreateGameParams({
     'p_team_mode': false,
     'p_language': language,
     'p_duration': 30,
+    if (shareCode != null && shareCode.isNotEmpty)
+      'p_share_code': shareCode,
   };
 }
 
@@ -111,6 +115,7 @@ class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
     required String nickname,
     required String packId,
     required String language,
+    String? shareCode,
   }) async {
     final n = nickname.trim();
     if (!isNicknameClean(n)) throw Exception('pseudo-invalide');
@@ -120,7 +125,11 @@ class LobbyViewModel extends Notifier<AsyncValue<GameSession?>> {
       final res = await supa().rpc(
         'create_game',
         params: buildCreateGameParams(
-            packId: packId, nickname: n, language: language),
+          packId: packId,
+          nickname: n,
+          language: language,
+          shareCode: shareCode,
+        ),
       );
       final full = sessionFromCreateResponse(
         nickname: n,

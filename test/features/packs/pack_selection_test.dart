@@ -84,13 +84,24 @@ void main() {
   test('K) createGame utilise le packId explicite, sans lookup share_code',
       () {
     final params = buildCreateGameParams(
-        packId: 'pid-123', nickname: 'Moi', language: 'ar');
+        packId: 'pid-123', nickname: 'Moi', language: 'fr');
     expect(params['p_pack_id'], 'pid-123');
     expect(params['p_nickname'], 'Moi');
     expect(params.containsKey('p_share_code'), isFalse);
     expect(params['p_team_mode'], isFalse);
-    expect(params['p_language'], 'ar');
+    expect(params['p_language'], 'fr');
     expect(params['p_duration'], 30);
+  });
+
+  test('H) flux partagé => p_share_code transmis au serveur', () {
+    final params = buildCreateGameParams(
+        packId: 'pid-123',
+        nickname: 'Moi',
+        language: 'ar',
+        shareCode: 'PK-AB12');
+    expect(params['p_pack_id'], 'pid-123');
+    expect(params['p_share_code'], 'PK-AB12');
+    expect(params['p_language'], 'ar');
   });
 
   test('I) buildCreateGameParams envoie p_language explicite', () {

@@ -91,5 +91,20 @@
   "statusFinalReveal": "الكشف الأخير",
   "statusFinished": "انتهت",
   "gameLanguage": "لغة اللعبة",
-  "bootstrapErrorTitle": "تعذر تشغيل Brainwager."
+  "bootstrapErrorTitle": "تعذر تشغيل Brainwager.",
+  "packImport": "استيراد حزمة",
+  "packShareCode": "رمز المشاركة",
+  "packOpen": "فتح",
+  "sharedPack": "حزمة مشتركة",
+  "packCreateWith": "إنشاء لعبة بهذه الحزمة",
+  "copyShareLink": "نسخ الرابط",
+  "linkCopied": "تم نسخ الرابط",
+  "packReport": "الإبلاغ",
+  "reportPackTitle": "الإبلاغ عن الحزمة",
+  "reportReason": "السبب",
+  "reportCancel": "إلغاء",
+  "reportSend": "إرسال",
+  "packReported": "تم الإبلاغ عن الحزمة",
+  "reportUpdated": "تم تحديث البلاغ",
+  "invalidShareCode": "رمز غير صالح (بصيغة PK-XXXX)"
 }

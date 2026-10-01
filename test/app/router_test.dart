@@ -64,4 +64,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Packs'), findsOneWidget);
   });
+
+  testWidgets('Q) /packs/import résout l’import, pas le détail',
+      (tester) async {
+    await _pumpRouter(tester);
+    brainRouter.go('/packs/import');
+    await tester.pumpAndSettle();
+    expect(find.text('Import a pack'), findsOneWidget);
+    expect(find.text('Share code'), findsOneWidget);
+  });
+
+  testWidgets('R) /packs/shared/:code résout le partagé, pas le détail',
+      (tester) async {
+    await _pumpRouter(tester);
+    brainRouter.go('/packs/shared/PK-AB12');
+    await tester.pumpAndSettle();
+    // AppBar partagée (le détail Yi/Yao dirait 'Packs') + chargement/erreur
+    // RPC headless, mais jamais l'écran détail catalogue.
+    expect(find.text('Shared pack'), findsOneWidget);
+  });
+
+  testWidgets('/packs/edit résout toujours l’éditeur', (tester) async {
+    await _pumpRouter(tester);
+    brainRouter.go('/packs/edit');
+    await tester.pumpAndSettle();
+    expect(find.text('Create a pack'), findsOneWidget);
+  });
+
+  testWidgets('/packs/edit/<uuid> résout toujours l’éditeur', (tester) async {
+    await _pumpRouter(tester);
+    brainRouter.go('/packs/edit/some-uuid');
+    await tester.pumpAndSettle();
+    expect(find.text('Edit'), findsOneWidget);
+  });
 }

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import 'pack.dart';
 import 'pack_providers.dart';
+import 'report_pack_dialog.dart';
 import 'ugc_draft.dart';
 
 String _lang(BuildContext context) =>
@@ -26,6 +27,10 @@ class PacksScreen extends ConsumerWidget {
           TextButton(
             onPressed: () => context.push('/packs/edit'),
             child: Text(l10n.packCreate),
+          ),
+          TextButton(
+            onPressed: () => context.push('/packs/import'),
+            child: Text(l10n.packImport),
           ),
         ],
       ),
@@ -162,6 +167,16 @@ class PackDetailScreen extends ConsumerWidget {
                 OutlinedButton(
                   onPressed: () => context.push('/packs/edit/${p.id}'),
                   child: Text(l10n.packEdit),
+                ),
+              ],
+              // Signalement : jamais pour son propre pack (serveur :
+              // cannot-report-own-pack). Officiels signalables.
+              if (!editable) ...[
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () =>
+                      showReportPackDialog(context, p.id),
+                  child: Text(l10n.packReport),
                 ),
               ],
               const SizedBox(height: 16),

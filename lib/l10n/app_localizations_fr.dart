@@ -292,4 +292,49 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get bootstrapErrorTitle => 'Brainwager ne peut pas démarrer.';
+
+  @override
+  String get packImport => 'Importer un pack';
+
+  @override
+  String get packShareCode => 'Code de partage';
+
+  @override
+  String get packOpen => 'Ouvrir';
+
+  @override
+  String get sharedPack => 'Pack partagé';
+
+  @override
+  String get packCreateWith => 'Créer une partie avec ce pack';
+
+  @override
+  String get copyShareLink => 'Copier le lien';
+
+  @override
+  String get linkCopied => 'Lien copié';
+
+  @override
+  String get packReport => 'Signaler';
+
+  @override
+  String get reportPackTitle => 'Signaler le pack';
+
+  @override
+  String get reportReason => 'Motif';
+
+  @override
+  String get reportCancel => 'Annuler';
+
+  @override
+  String get reportSend => 'Envoyer';
+
+  @override
+  String get packReported => 'Pack signalé';
+
+  @override
+  String get reportUpdated => 'Signalement mis à jour';
+
+  @override
+  String get invalidShareCode => 'Code invalide (format PK-XXXX)';
 }

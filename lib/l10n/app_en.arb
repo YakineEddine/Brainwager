@@ -92,5 +92,20 @@
   "editorQuestionAr": "Question AR",
   "editorAnswerAr": "Answer AR",
   "editorAliasesAr": "Aliases AR (one per line)",
-  "bootstrapErrorTitle": "Brainwager could not start."
+  "bootstrapErrorTitle": "Brainwager could not start.",
+  "packImport": "Import a pack",
+  "packShareCode": "Share code",
+  "packOpen": "Open",
+  "sharedPack": "Shared pack",
+  "packCreateWith": "Create a game with this pack",
+  "copyShareLink": "Copy link",
+  "linkCopied": "Link copied",
+  "packReport": "Report",
+  "reportPackTitle": "Report pack",
+  "reportReason": "Reason",
+  "reportCancel": "Cancel",
+  "reportSend": "Send",
+  "packReported": "Pack reported",
+  "reportUpdated": "Report updated",
+  "invalidShareCode": "Invalid code (PK-XXXX format)"
 }

@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/utils/game_errors.dart';
 import '../../l10n/app_localizations.dart';
 import 'pack_providers.dart';
+import 'shared_pack.dart';
 import 'ugc_draft.dart';
 import 'ugc_repository.dart';
 import '../../core/utils/arabic_text.dart' show isNumericAnswer;
@@ -295,6 +296,17 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
     );
   }
 
+  /// Copie le lien de partage (URI autour du code serveur, jamais généré).
+  Future<void> _copyLink(String code) async {
+    await Clipboard.setData(
+        ClipboardData(text: shareLinkFor(code)));
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.linkCopied)),
+    );
+  }
+
   void _addQuestion() {
     if (_saving || _forms.length >= 100) return;
     setState(() {
@@ -436,9 +448,17 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
                     if (_shareCode != null && _shareCode!.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Text('${l10n.editorShareCode} : $_shareCode'),
-                      TextButton(
-                        onPressed: () => _copyCode(_shareCode!),
-                        child: Text(l10n.editorCopyCode),
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: () => _copyCode(_shareCode!),
+                            child: Text(l10n.editorCopyCode),
+                          ),
+                          TextButton(
+                            onPressed: () => _copyLink(_shareCode!),
+                            child: Text(l10n.copyShareLink),
+                          ),
+                        ],
                       ),
                     ],
                     if (_isCreate) ...[

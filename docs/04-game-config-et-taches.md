@@ -80,9 +80,11 @@ trilingues, DEMO01 arabisé).
 NEXT (réalisé Phase 3AR) : UI Flutter arabe / RTL automatique, catalogue et
 sélection trilingues, éditeur UGC trilingue sur RPC 0012, matching Dart
 aligné SQL 0012.
-Ensuite toujours en attente : import/deep links, report UI, achats,
-5 packs de production.
-Phase 3 NON terminée.
+Phase 3D partage/import/deep-link/signalement UI terminée (lookup RPC
+uniquement, deep links custom scheme, report RPC uniquement, aucune
+persistance locale d'import).
+Restent : purchases, 5 packs de production.
+Phase 3 toujours NON complète.
 
 ### Phase 4 — Équipes, TV, correction manuelle, podium
 Livrables : `team_mode` avec scoring somme/moyenne (moyenne défaut),

@@ -290,4 +290,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bootstrapErrorTitle => 'Brainwager could not start.';
+
+  @override
+  String get packImport => 'Import a pack';
+
+  @override
+  String get packShareCode => 'Share code';
+
+  @override
+  String get packOpen => 'Open';
+
+  @override
+  String get sharedPack => 'Shared pack';
+
+  @override
+  String get packCreateWith => 'Create a game with this pack';
+
+  @override
+  String get copyShareLink => 'Copy link';
+
+  @override
+  String get linkCopied => 'Link copied';
+
+  @override
+  String get packReport => 'Report';
+
+  @override
+  String get reportPackTitle => 'Report pack';
+
+  @override
+  String get reportReason => 'Reason';
+
+  @override
+  String get reportCancel => 'Cancel';
+
+  @override
+  String get reportSend => 'Send';
+
+  @override
+  String get packReported => 'Pack reported';
+
+  @override
+  String get reportUpdated => 'Report updated';
+
+  @override
+  String get invalidShareCode => 'Invalid code (PK-XXXX format)';
 }
