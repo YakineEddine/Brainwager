@@ -296,6 +296,11 @@ String friendlyUgcError(Object error, String languageCode) {
           'Code invalide (format PK-XXXX).',
           'Invalid code (PK-XXXX format).',
           'رمز غير صالح (بصيغة PK-XXXX).');
+    case 'not-authenticated':
+      return t(
+          'Session perdue : reconnecte-toi.',
+          'Session lost: please sign in again.',
+          'فُقدت الجلسة: سجل الدخول مجددًا.');
     default:
       return t('Erreur réseau ou serveur. Réessaie.',
           'Network or server error. Try again.', 'خطأ في الشبكة أو الخادم. حاول مجددًا.');

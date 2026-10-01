@@ -23,14 +23,19 @@ const _catalogPack = PackSummary(
   isHidden: false,
 );
 
-Future<void> _pumpCreate(WidgetTester tester, {String? sharedCode}) {
+Future<void> _pumpCreate(
+  WidgetTester tester, {
+  String? sharedCode,
+  void Function()? onCatalogLoad,
+}) {
   return tester.pumpWidget(
     ProviderScope(
       overrides: [
-        packCatalogProvider.overrideWith(
-          (ref) async =>
-              const PackCatalog(packs: [_catalogPack], activeEntitlements: {}),
-        ),
+        packCatalogProvider.overrideWith((ref) async {
+          onCatalogLoad?.call();
+          return const PackCatalog(
+              packs: [_catalogPack], activeEntitlements: {});
+        }),
       ],
       child: MaterialApp(
         locale: const Locale('en'),
@@ -59,5 +64,23 @@ void main() {
     await _pumpCreate(tester);
     await tester.pump();
     expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+  });
+
+  testWidgets('isolation : shared ne charge jamais le catalogue',
+      (tester) async {
+    var catalogLoads = 0;
+    await _pumpCreate(tester,
+        sharedCode: 'PK-AB12', onCatalogLoad: () => catalogLoads++);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(catalogLoads, 0);
+  });
+
+  testWidgets('isolation : mode normal charge le catalogue', (tester) async {
+    var catalogLoads = 0;
+    await _pumpCreate(tester, onCatalogLoad: () => catalogLoads++);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(catalogLoads, 1);
   });
 }

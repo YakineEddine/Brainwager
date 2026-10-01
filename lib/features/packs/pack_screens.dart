@@ -1,6 +1,6 @@
 // Écrans catalogue Phase 3A : /packs (liste) + /packs/:id (détail).
 // Anti-triche : aperçu via get_pack_preview uniquement, jamais de réponses.
-// Textes via l10n ARB + locale courante pour le contenu pack FR/EN.
+// Textes via l10n ARB + locale courante pour le contenu pack FR/EN/AR.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';

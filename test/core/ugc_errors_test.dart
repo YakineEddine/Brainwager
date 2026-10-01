@@ -39,6 +39,20 @@ void main() {
     );
   });
 
+  test('not-authenticated FR/EN/AR (partage/signalement)', () {
+    expect(
+      friendlyUgcError(Exception('not-authenticated'), 'fr'),
+      'Session perdue : reconnecte-toi.',
+    );
+    expect(
+      friendlyUgcError(Exception('not-authenticated'), 'en'),
+      'Session lost: please sign in again.',
+    );
+    expect(
+      friendlyUgcError(Exception('not-authenticated'), 'ar'),
+      'فُقدت الجلسة: سجل الدخول مجددًا.',
+    );
+  });
   test('AD) erreurs arabes en AR', () {
     expect(
       friendlyUgcError(Exception('arabic-content-required'), 'ar'),
