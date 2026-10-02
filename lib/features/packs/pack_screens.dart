@@ -4,7 +4,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../l10n/app_localizations.dart';
+import '../shop/billing_controller.dart';
+import '../shop/billing_errors.dart';
 import 'pack.dart';
 import 'pack_providers.dart';
 import 'report_pack_dialog.dart';
@@ -150,17 +153,12 @@ class PackDetailScreen extends ConsumerWidget {
                 ),
               if (p.isPremium) ...[
                 const SizedBox(height: 8),
-                Text(locked
-                    ? '${l10n.packPremium} · ${l10n.packLocked}'
-                    : l10n.packPremium),
-                if (locked)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: ElevatedButton(
-                      onPressed: null,
-                      child: Text(l10n.packComingSoon),
-                    ),
-                  ),
+                Text(
+                  locked
+                      ? '${l10n.packPremium} · ${l10n.packLocked}'
+                      : l10n.packPremium,
+                ),
+                if (locked) _PackBuyButton(pack: p),
               ],
               if (editable) ...[
                 const SizedBox(height: 8),
@@ -174,18 +172,18 @@ class PackDetailScreen extends ConsumerWidget {
               if (!editable) ...[
                 const SizedBox(height: 8),
                 OutlinedButton(
-                  onPressed: () =>
-                      showReportPackDialog(context, p.id),
+                  onPressed: () => showReportPackDialog(context, p.id),
                   child: Text(l10n.packReport),
                 ),
               ],
               const SizedBox(height: 16),
-              Text(l10n.packPreview,
-                  style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                l10n.packPreview,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               preview.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (_, _) => Text(l10n.packLoadError),
                 data: (rows) {
                   if (rows.isEmpty) return Text(l10n.packEmpty);
@@ -195,8 +193,7 @@ class PackDetailScreen extends ConsumerWidget {
                         ListTile(
                           leading: Text('#${r.idx + 1}'),
                           title: Text(r.localizedPrompt(lang)),
-                          subtitle:
-                              Text('${r.category} · ${r.difficulty}/3'),
+                          subtitle: Text('${r.category} · ${r.difficulty}/3'),
                         ),
                     ],
                   );
@@ -205,6 +202,85 @@ class PackDetailScreen extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// CTA achat pack premium verrouillé (Phase 3E).
+/// Prix réel Play uniquement, jamais de prix inventé. L'écran se déverrouille
+/// via packCatalogProvider après vérification serveur + refresh entitlements.
+class _PackBuyButton extends ConsumerStatefulWidget {
+  final PackSummary pack;
+  const _PackBuyButton({required this.pack});
+
+  @override
+  ConsumerState<_PackBuyButton> createState() => _PackBuyButtonState();
+}
+
+class _PackBuyButtonState extends ConsumerState<_PackBuyButton> {
+  bool _initRequested = false;
+
+  void _ensure(String sku) {
+    if (_initRequested) return;
+    _initRequested = true;
+    Future.microtask(() {
+      if (!mounted) return;
+      ref
+          .read(billingControllerProvider.notifier)
+          .ensureInitialized(productIds: {sku});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final lang = Localizations.localeOf(context).languageCode;
+    final sku = widget.pack.priceSku;
+    if (sku == null || sku.trim().isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: ElevatedButton(
+          onPressed: null,
+          child: Text(l10n.shopNoProducts),
+        ),
+      );
+    }
+    _ensure(sku);
+    final billing = ref.watch(billingControllerProvider);
+    final product = billing.productsById[sku];
+    final err = billing.lastErrorCode;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ElevatedButton(
+            onPressed: billing.canBuy(sku)
+                ? () => ref.read(billingControllerProvider.notifier).buySku(sku)
+                : null,
+            child: Text(
+              product == null
+                  ? l10n.shopBuy
+                  : l10n.shopBuyWithPrice(product.price),
+            ),
+          ),
+          if (product == null && billing.initialized && billing.backendReady)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(l10n.shopNoProducts),
+            ),
+          if (!billing.backendReady && billing.initialized)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(l10n.shopBackendUnavailable),
+            ),
+          if (err != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(friendlyBillingError(err, lang)),
+            ),
+        ],
       ),
     );
   }

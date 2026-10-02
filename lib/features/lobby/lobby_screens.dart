@@ -39,6 +39,11 @@ class HomeScreen extends StatelessWidget {
               onPressed: () => context.go('/packs'),
               child: Text(l10n.packs),
             ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => context.go('/shop'),
+              child: Text(l10n.shop),
+            ),
           ],
         ),
       ),
@@ -111,8 +116,7 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
     // NOTE : aucun ref.watch(packCatalogProvider) ici. En mode partagé,
     // le catalogue normal ne doit même pas être déclenché (ni chargé ni
     // affiché) : seule la branche partagée (RPC dédié) tourne.
-    final shared =
-        widget.sharedCode != null && widget.sharedCode!.isNotEmpty;
+    final shared = widget.sharedCode != null && widget.sharedCode!.isNotEmpty;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.createGame)),
       body: Padding(
@@ -134,8 +138,7 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                 ButtonSegment(value: 'ar', label: Text('العربية')),
               ],
               selected: {gameLanguage},
-              onSelectionChanged: (s) =>
-                  setState(() => _gameLang = s.first),
+              onSelectionChanged: (s) => setState(() => _gameLang = s.first),
             ),
             const SizedBox(height: 12),
             // Mode partagé : SEULE la branche partagée (jamais le dropdown
@@ -144,10 +147,7 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
             if (shared)
               _sharedBranch(gameLanguage)
             else
-              _CatalogCreateBranch(
-                pseudo: _pseudo,
-                gameLanguage: gameLanguage,
-              ),
+              _CatalogCreateBranch(pseudo: _pseudo, gameLanguage: gameLanguage),
           ],
         ),
       ),
@@ -170,13 +170,17 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
           return Row(
             children: [
               Expanded(
-                child: Text(friendlyUgcError(
+                child: Text(
+                  friendlyUgcError(
                     snap.error ?? Exception('pack-not-found'),
-                    Localizations.localeOf(context).languageCode)),
+                    Localizations.localeOf(context).languageCode,
+                  ),
+                ),
               ),
               TextButton(
                 onPressed: () => setState(
-                    () => _sharedFuture = _sharedFutureFor(widget.sharedCode)),
+                  () => _sharedFuture = _sharedFutureFor(widget.sharedCode),
+                ),
                 child: Text(l10n.packRetry),
               ),
             ],
@@ -279,8 +283,7 @@ class _CatalogCreateBranch extends ConsumerStatefulWidget {
       _CatalogCreateBranchState();
 }
 
-class _CatalogCreateBranchState
-    extends ConsumerState<_CatalogCreateBranch> {
+class _CatalogCreateBranchState extends ConsumerState<_CatalogCreateBranch> {
   String? _selectedPackId;
 
   @override
@@ -316,8 +319,7 @@ class _CatalogCreateBranchState
             ],
           ),
           data: (c) {
-            final selectable =
-                selectablePacks(c.packs, c.activeEntitlements);
+            final selectable = selectablePacks(c.packs, c.activeEntitlements);
             if (selectable.isEmpty) {
               return Text(l10n.packNoAccessiblePack);
             }
@@ -343,9 +345,7 @@ class _CatalogCreateBranchState
         const SizedBox(height: 12),
         _CreateGameButton(
           pseudo: widget.pseudo,
-          busy: catalog.isLoading ||
-              catalog.hasError ||
-              selectedPackId == null,
+          busy: catalog.isLoading || catalog.hasError || selectedPackId == null,
           packId: selectedPackId,
           gameLanguage: widget.gameLanguage,
           uiLanguage: Localizations.localeOf(context).languageCode,
@@ -413,17 +413,12 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
                       try {
                         final s = await ref
                             .read(lobbyViewModelProvider.notifier)
-                            .joinGame(
-                              code: _code.text,
-                              nickname: _pseudo.text,
-                            );
+                            .joinGame(code: _code.text, nickname: _pseudo.text);
                         if (context.mounted) context.go('/game/${s.gameId}');
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content:
-                                    Text(friendlyGameError(e, lang))),
+                            SnackBar(content: Text(friendlyGameError(e, lang))),
                           );
                         }
                       }

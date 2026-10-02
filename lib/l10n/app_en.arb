@@ -108,5 +108,19 @@
   "reportClose": "Close",
   "packReported": "Pack reported",
   "reportUpdated": "Report updated",
-  "invalidShareCode": "Invalid code (PK-XXXX format)"
+  "invalidShareCode": "Invalid code (PK-XXXX format)",
+  "shopBuy": "Buy",
+  "shopBuyWithPrice": "Buy · {price}",
+  "shopRestorePurchases": "Restore purchases",
+  "shopRefreshPurchases": "Refresh purchases",
+  "shopOwned": "Owned",
+  "shopPurchasing": "Purchasing…",
+  "shopPending": "Pending",
+  "shopSuccess": "Purchase verified",
+  "shopBackendUnavailable": "Purchases temporarily unavailable",
+  "shopPlayUnavailable": "Play Store unavailable",
+  "shopUnsupported": "Purchases available on Android only",
+  "shopNoProducts": "No products configured",
+  "shopRemoveAds": "Remove ads",
+  "shopCanceled": "Purchase canceled"
 }

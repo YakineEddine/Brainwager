@@ -107,5 +107,19 @@
   "reportClose": "إغلاق",
   "packReported": "تم الإبلاغ عن الحزمة",
   "reportUpdated": "تم تحديث البلاغ",
-  "invalidShareCode": "رمز غير صالح (بصيغة PK-XXXX)"
+  "invalidShareCode": "رمز غير صالح (بصيغة PK-XXXX)",
+  "shopBuy": "شراء",
+  "shopBuyWithPrice": "شراء · {price}",
+  "shopRestorePurchases": "استعادة المشتريات",
+  "shopRefreshPurchases": "تحديث المشتريات",
+  "shopOwned": "مملوك",
+  "shopPurchasing": "جارٍ الشراء…",
+  "shopPending": "قيد الانتظار",
+  "shopSuccess": "تم التحقق من الشراء",
+  "shopBackendUnavailable": "المشتريات غير متاحة مؤقتًا",
+  "shopPlayUnavailable": "متجر Play غير متاح",
+  "shopUnsupported": "المشتريات متاحة على Android فقط",
+  "shopNoProducts": "لا توجد منتجات مهيأة",
+  "shopRemoveAds": "إزالة الإعلانات",
+  "shopCanceled": "تم إلغاء الشراء"
 }

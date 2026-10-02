@@ -86,10 +86,13 @@ persistance locale d'import).
 Phase 3E autorité backend billing terminée (migration 0013 +
 `verify-purchase` déployés : ledger `google_play_purchases` backend-only,
 `apply_google_play_purchase` service-only, Edge Function seule autorité).
-NEXT : UI/client Flutter `in_app_purchase` toujours à faire ;
-configuration Play Console (produits + compte de service) toujours requise ;
-5 packs de production toujours requis. Aucun achat Play réel validé
-manuellement pour l'instant.
+Phase 3E client billing implémenté (code Flutter : `in_app_purchase`
+Android-only, `verify`/`restore`/`sync` via Edge Function, readiness gate,
+entitlements serveur seule source). MAIS test Play réel toujours en attente
+car : configuration Play Console (produits) + secret compte de service
+(`GOOGLE_SERVICE_ACCOUNT_JSON`) requis.
+Restent Phase 3 : validation manuelle d'un achat Play + 5 packs de production.
+Aucun achat Play réel validé manuellement pour l'instant.
 Phase 3 toujours NON complète.
 
 ### Phase 4 — Équipes, TV, correction manuelle, podium

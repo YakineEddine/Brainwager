@@ -27,7 +27,7 @@
 | i18n | `flutter_localizations` + `gen-l10n` (ARB `app_fr/en/ar.arb`, RTL automatique) | Officiel, sans dépendance tierce |
 | Backend | `supabase_flutter` 2.x | Auth anonyme + Postgres + Realtime |
 | Ads | `google_mobile_ads` + `user_messaging_platform` (UMP RGPD) | AdMob + consentement UE |
-| Billing | `in_app_purchase` (client, ticket suivant) + Edge Function `verify-purchase` + Google Play Developer API + ledger privé `google_play_purchases` + `entitlements` (SELECT own only) | Validation serveur avant entitlement, token anti-rejeu, acknowledgement requis |
+| Billing | `in_app_purchase` (client implémenté Phase 3E, Android-only) + Edge Function `verify-purchase` + Google Play Developer API + ledger privé `google_play_purchases` + `entitlements` (SELECT own only) | Validation serveur avant entitlement, token anti-rejeu, acknowledgement requis |
 | Crashs | `sentry_flutter` (désactivable) ou Play Console seule | Aucun Firebase |
 | Anim | `confetti`, `flutter_animate` | Podium, classements, compte à rebours |
 | Son | `audioplayers` (sons synthétisés maison, toggle) | Zéro asset copié |
@@ -42,7 +42,8 @@ INSERT/UPDATE pour `authenticated` (SELECT own only, server-write only). Produit
 one-time NON-CONSUMABLE. Le serveur vérifie via Google Play Developer API avant
 tout entitlement ; token rejoué protégé (`purchase_token` PK, `verify` strict,
 `restore` avec transfert anon contrôlé) ; acknowledgement serveur requis.
-Stack billing : client Flutter `in_app_purchase` (ticket suivant) → Edge Function
+Stack billing : client Flutter `in_app_purchase` (implémenté Phase 3E,
+Android-only, backend autorité inchangée) → Edge Function
 `verify-purchase` (seule autorité app-facing) → API Play → ledger privé
 `google_play_purchases` (backend-only, zéro accès client) → `entitlements`.
 Restauration = même fonction en mode `restore` ; `sync` revalide les tokens stockés.

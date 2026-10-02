@@ -70,8 +70,9 @@ Rewarded : débloquer 1 pack 24 h. UMP avant première pub (UE).
 - `/packs` : catalogue (métadonnées seules, badges Officiel/Mon pack/Premium/
   Verrouillé, retry/erreur/vide).
 - `/packs/:id` : détail + aperçu via `get_pack_preview` uniquement
-  (jamais de réponses) ; premium verrouillé = métadonnées + « Disponible
-  bientôt », sans achat.
+  (jamais de réponses) ; premium verrouillé = métadonnées + CTA achat
+  Play (prix réel, readiness backend requise), déblocage via entitlements
+  serveur uniquement.
 - `/create` : sélecteur de pack réel (premium verrouillé désactivé,
   défaut = premier accessible) + sélection trilingue de langue de partie
   FR/EN/AR (indépendante de la langue UI) ; plus de pack hardcodé.
@@ -88,4 +89,8 @@ Rewarded : débloquer 1 pack 24 h. UMP avant première pub (UE).
   Sémantique d'import : lookup + utilisation via RPC uniquement — AUCUNE
   copie, AUCUN changement de propriétaire, AUCUNE persistance locale,
   AUCUN flag "importé".
-- NON terminé : purchases, 5 packs officiels de production.
+- Phase 3E client (billing) : `/shop` implémenté (packs premium officiels +
+  `remove_ads`, prix Play réels, Owned via entitlements, Buy/Restore/Refresh
+  avec readiness gate `sync`), CTA achat détail pack premium implémenté,
+  restore + refresh implémentés, FR/EN/AR (RTL arabe automatique).
+- NON terminé : validation manuelle Play, 5 packs officiels de production.

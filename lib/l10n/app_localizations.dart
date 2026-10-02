@@ -747,6 +747,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invalid code (PK-XXXX format)'**
   String get invalidShareCode;
+
+  /// No description provided for @shopBuy.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy'**
+  String get shopBuy;
+
+  /// No description provided for @shopBuyWithPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy · {price}'**
+  String shopBuyWithPrice(Object price);
+
+  /// No description provided for @shopRestorePurchases.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchases'**
+  String get shopRestorePurchases;
+
+  /// No description provided for @shopRefreshPurchases.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh purchases'**
+  String get shopRefreshPurchases;
+
+  /// No description provided for @shopOwned.
+  ///
+  /// In en, this message translates to:
+  /// **'Owned'**
+  String get shopOwned;
+
+  /// No description provided for @shopPurchasing.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchasing…'**
+  String get shopPurchasing;
+
+  /// No description provided for @shopPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get shopPending;
+
+  /// No description provided for @shopSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase verified'**
+  String get shopSuccess;
+
+  /// No description provided for @shopBackendUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases temporarily unavailable'**
+  String get shopBackendUnavailable;
+
+  /// No description provided for @shopPlayUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Play Store unavailable'**
+  String get shopPlayUnavailable;
+
+  /// No description provided for @shopUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases available on Android only'**
+  String get shopUnsupported;
+
+  /// No description provided for @shopNoProducts.
+  ///
+  /// In en, this message translates to:
+  /// **'No products configured'**
+  String get shopNoProducts;
+
+  /// No description provided for @shopRemoveAds.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove ads'**
+  String get shopRemoveAds;
+
+  /// No description provided for @shopCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase canceled'**
+  String get shopCanceled;
 }
 
 class _AppLocalizationsDelegate

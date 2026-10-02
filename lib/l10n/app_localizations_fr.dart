@@ -340,4 +340,48 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get invalidShareCode => 'Code invalide (format PK-XXXX)';
+
+  @override
+  String get shopBuy => 'Acheter';
+
+  @override
+  String shopBuyWithPrice(Object price) {
+    return 'Acheter · $price';
+  }
+
+  @override
+  String get shopRestorePurchases => 'Restaurer les achats';
+
+  @override
+  String get shopRefreshPurchases => 'Actualiser les achats';
+
+  @override
+  String get shopOwned => 'Possédé';
+
+  @override
+  String get shopPurchasing => 'Achat en cours…';
+
+  @override
+  String get shopPending => 'En attente';
+
+  @override
+  String get shopSuccess => 'Achat vérifié';
+
+  @override
+  String get shopBackendUnavailable => 'Achats temporairement indisponibles';
+
+  @override
+  String get shopPlayUnavailable => 'Play Store indisponible';
+
+  @override
+  String get shopUnsupported => 'Achats disponibles uniquement sur Android';
+
+  @override
+  String get shopNoProducts => 'Aucun produit configuré';
+
+  @override
+  String get shopRemoveAds => 'Supprimer les pubs';
+
+  @override
+  String get shopCanceled => 'Achat annulé';
 }

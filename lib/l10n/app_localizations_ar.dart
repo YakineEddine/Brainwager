@@ -338,4 +338,48 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get invalidShareCode => 'رمز غير صالح (بصيغة PK-XXXX)';
+
+  @override
+  String get shopBuy => 'شراء';
+
+  @override
+  String shopBuyWithPrice(Object price) {
+    return 'شراء · $price';
+  }
+
+  @override
+  String get shopRestorePurchases => 'استعادة المشتريات';
+
+  @override
+  String get shopRefreshPurchases => 'تحديث المشتريات';
+
+  @override
+  String get shopOwned => 'مملوك';
+
+  @override
+  String get shopPurchasing => 'جارٍ الشراء…';
+
+  @override
+  String get shopPending => 'قيد الانتظار';
+
+  @override
+  String get shopSuccess => 'تم التحقق من الشراء';
+
+  @override
+  String get shopBackendUnavailable => 'المشتريات غير متاحة مؤقتًا';
+
+  @override
+  String get shopPlayUnavailable => 'متجر Play غير متاح';
+
+  @override
+  String get shopUnsupported => 'المشتريات متاحة على Android فقط';
+
+  @override
+  String get shopNoProducts => 'لا توجد منتجات مهيأة';
+
+  @override
+  String get shopRemoveAds => 'إزالة الإعلانات';
+
+  @override
+  String get shopCanceled => 'تم إلغاء الشراء';
 }
