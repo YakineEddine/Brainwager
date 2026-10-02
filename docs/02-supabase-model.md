@@ -4,7 +4,7 @@ Conventions : `uuid` PK `gen_random_uuid()`, `timestamptz` UTC (`now()`),
 contenus localisés FR / EN / AR (`*_fr`, `*_en`, `*_ar` selon les tables).
 Tout en `public`. RLS activé partout.
 
-## 1. Schéma (12 tables, dont google_play_purchases backend-only, migration 0013)
+## 1. Schéma (13 tables, dont google_play_purchases backend-only, migration 0013)
 
 ```text
 profiles 1──* packs (owner)          packs 1──* questions 1──1 question_answers_private
