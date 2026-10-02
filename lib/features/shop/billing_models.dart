@@ -68,6 +68,8 @@ bool get isBillingSupportedNow =>
 
 /// Erreurs backend/config fatales : le bouton Buy doit rester désactivé
 /// (ne jamais laisser payer si on ne peut pas vérifier/acknowledger).
+/// Inclut aussi les erreurs internes/réseau de vérification : après un
+/// échec infra, la readiness se referme jusqu'au prochain sync réussi.
 const backendFatalBillingCodes = <String>{
   'billing-not-configured',
   'billing-backend-not-configured',
@@ -75,6 +77,8 @@ const backendFatalBillingCodes = <String>{
   'google-play-permission-denied',
   'google-verify-failed',
   'billing-database-error',
+  'billing-internal-error',
+  'billing-network-error',
 };
 
 bool isBackendFatalBillingCode(String code) =>

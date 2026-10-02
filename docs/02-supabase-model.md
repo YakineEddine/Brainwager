@@ -241,16 +241,22 @@ Toutes : `SECURITY DEFINER`, `SET search_path = public`, `REVOKE` public + `GRAN
 ciblé, contrôle `auth.uid()` interne.
 
 Edge Function `verify-purchase` (Deno, service_role, slug `verify-purchase`,
-version 1, ACTIVE, `verify_jwt: true`) : seule autorité billing app-facing.
+version 3, ACTIVE, `verify_jwt: true`) : seule autorité billing app-facing.
 Utilisateurs authentifiés uniquement. Package Google Play :
 `com.yakineeddine.brainwager`. Validation via
 `purchases.productsv2.getproductpurchasev2`, tentative d'acknowledgement
 serveur, fail-closed si credentials Google absents (secret
-`GOOGLE_SERVICE_ACCOUNT_JSON` attendu, jamais commité).
+`GOOGLE_SERVICE_ACCOUNT_JSON` attendu, jamais commité, toujours non configuré
+en production à ce jour).
 Modes `verify` / `restore` / `sync` : `verify` exige que le SHA-256 du user id
 Supabase égale `obfuscatedExternalAccountId` ; `restore` permet le transfert
 de profil anonyme (token/entitlement déplacé, ancien entitlement désactivé
-sans autre token valide) ; `sync` revalide les tokens stockés. `apply_google_play_purchase`
+sans autre token valide) ; `sync` revalide les tokens stockés. Depuis la v3,
+`sync` exécute d'abord une sonde de permission Play
+(`purchases.voidedpurchases.list`, `maxResults=1`) : elle prouve que le compte
+de service lit les données financières Billing de CETTE app même sans aucun
+token stocké, et Buy reste désactivé tant que cette permission n'est pas
+utilisable. `apply_google_play_purchase`
 n'est PAS une RPC app : service-only, jamais invoquée par Flutter.
 
 ## 3. Realtime (sans tick)

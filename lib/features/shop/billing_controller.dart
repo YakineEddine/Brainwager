@@ -56,6 +56,11 @@ class BillingUiState {
   final Map<String, ProductDetails> productsById;
   final Set<String> notFoundIds;
   final Set<String> activeEntitlements;
+
+  /// Vrai dès qu'un reload serveur a réussi, même avec un set vide.
+  /// Un set vide est un résultat autoritaire valide (ex. après refund) :
+  /// ne jamais utiliser Set.isEmpty comme sentinelle "non chargé".
+  final bool entitlementsLoaded;
   final bool syncing;
   final String? purchasingSku;
   final String? pendingSku;
@@ -72,6 +77,7 @@ class BillingUiState {
     this.productsById = const {},
     this.notFoundIds = const {},
     this.activeEntitlements = const {},
+    this.entitlementsLoaded = false,
     this.syncing = false,
     this.purchasingSku,
     this.pendingSku,
@@ -99,6 +105,7 @@ class BillingUiState {
     Map<String, ProductDetails>? productsById,
     Set<String>? notFoundIds,
     Set<String>? activeEntitlements,
+    bool? entitlementsLoaded,
     bool? syncing,
     String? Function()? purchasingSku,
     String? Function()? pendingSku,
@@ -117,6 +124,7 @@ class BillingUiState {
       productsById: productsById ?? this.productsById,
       notFoundIds: notFoundIds ?? this.notFoundIds,
       activeEntitlements: activeEntitlements ?? this.activeEntitlements,
+      entitlementsLoaded: entitlementsLoaded ?? this.entitlementsLoaded,
       syncing: syncing ?? this.syncing,
       purchasingSku: purchasingSku == null
           ? this.purchasingSku
@@ -177,7 +185,11 @@ class BillingController extends Notifier<BillingUiState> {
     _sub = _gateway.purchaseStream.listen(
       _onPurchases,
       onError: (Object e) {
-        state = state.copyWith(lastErrorCode: () => billingErrorCode(e));
+        state = state.copyWith(
+          lastErrorCode: () => billingErrorCode(e),
+          purchasingSku: () => null,
+          pendingSku: () => null,
+        );
       },
     );
     final available = await _gateway.isAvailable();
@@ -220,6 +232,11 @@ class BillingController extends Notifier<BillingUiState> {
           backendErrorCode: () => null,
         );
         await reloadEntitlements();
+        // Le sync peut désactiver des achats remboursés/annulés : le
+        // catalogue global doit voir le nouvel état serveur.
+        try {
+          ref.invalidate(packCatalogProvider);
+        } catch (_) {}
       } else {
         final code = res.errorCode ?? 'billing-network-error';
         state = state.copyWith(
@@ -238,14 +255,33 @@ class BillingController extends Notifier<BillingUiState> {
   }
 
   /// Recharge les entitlements serveur (source de vérité).
+  /// Même un set vide est autoritaire (ex. après refund) : entitlementsLoaded
+  /// passe à true. En échec transport, l'état précédent est conservé
+  /// (jamais de faux vide, jamais de révocation locale).
   Future<void> reloadEntitlements() async {
     try {
       final loader = ref.read(billingEntitlementsLoaderProvider);
       final entitlements = await loader();
-      state = state.copyWith(activeEntitlements: entitlements);
+      state = state.copyWith(
+        activeEntitlements: entitlements,
+        entitlementsLoaded: true,
+      );
     } catch (_) {
       // Ne jamais révoquer localement sur échec transport.
     }
+  }
+
+  /// Échec infra/backend de vérification : referme la readiness.
+  /// Réservé aux erreurs serveur/réseau (jamais aux erreurs d'achat
+  /// spécifiques comme purchase-pending ou purchase-account-mismatch).
+  /// Buy reste désactivé jusqu'au prochain sync réussi.
+  void _applyBackendFailure(String code) {
+    state = state.copyWith(
+      backendReady: false,
+      backendErrorCode: () => code,
+      lastErrorCode: () => code,
+      purchasingSku: () => null,
+    );
   }
 
   /// Achat : hash SHA-256 obligatoire, jamais buyConsumable/offerToken.
@@ -453,8 +489,17 @@ class BillingController extends Notifier<BillingUiState> {
         if (allowComplete && !res.acknowledged && p.pendingCompletePurchase) {
           try {
             await _gateway.completePurchase(p);
-            // Best-effort : le ledger suit après fallback.
-            await _backend.syncPurchases();
+            // Best-effort : le ledger suit après fallback. En cas de succès,
+            // le catalogue global suit aussi (remboursements visibles).
+            try {
+              final syncRes = await _backend.syncPurchases();
+              if (syncRes.ok) {
+                await reloadEntitlements();
+                try {
+                  ref.invalidate(packCatalogProvider);
+                } catch (_) {}
+              }
+            } catch (_) {}
           } catch (_) {}
         }
       } else {
@@ -462,6 +507,10 @@ class BillingController extends Notifier<BillingUiState> {
         final code =
             res.errorCode ??
             (res.ok ? 'purchase-not-active' : 'billing-network-error');
+        if (isBackendFatalBillingCode(code)) {
+          _applyBackendFailure(code);
+          return;
+        }
         if (code == 'purchase-pending') {
           state = state.copyWith(
             pendingSku: () => p.productID,
@@ -476,10 +525,15 @@ class BillingController extends Notifier<BillingUiState> {
         }
       }
     } catch (e) {
-      state = state.copyWith(
-        lastErrorCode: () => billingErrorCode(e),
-        purchasingSku: () => null,
-      );
+      final code = billingErrorCode(e);
+      if (isBackendFatalBillingCode(code)) {
+        _applyBackendFailure(code);
+      } else {
+        state = state.copyWith(
+          lastErrorCode: () => code,
+          purchasingSku: () => null,
+        );
+      }
     } finally {
       verifyingTokens.remove(token);
     }

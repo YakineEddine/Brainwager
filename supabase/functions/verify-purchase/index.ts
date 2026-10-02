@@ -176,6 +176,23 @@ async function googleAccessToken(): Promise<string> {
   return token;
 }
 
+async function assertGooglePlayBillingAccess(
+  accessToken: string,
+): Promise<void> {
+  const url =
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(PACKAGE_NAME)}/purchases/voidedpurchases?maxResults=1`;
+  const response = await fetch(url, {
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    throw new BillingError('google-play-permission-denied', 503);
+  }
+  if (!response.ok) {
+    throw new BillingError('google-verify-failed', 502);
+  }
+}
+
 async function getGooglePurchase(
   purchaseToken: string,
   accessToken: string,
@@ -434,6 +451,12 @@ Deno.serve(async (req: Request) => {
     const accessToken = await googleAccessToken();
 
     if (mode === 'sync') {
+      // Readiness probe: prove the service account can read Play Billing data
+      // for THIS app even when no purchase token exists yet. Voided Purchases
+      // requires financial-data access, preventing Buy before verification
+      // permissions are actually valid.
+      await assertGooglePlayBillingAccess(accessToken);
+
       const { data: records, error: recordError } = await admin
         .from('google_play_purchases')
         .select('purchase_token,sku')

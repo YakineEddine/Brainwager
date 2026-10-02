@@ -79,9 +79,11 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
           }
           return _ShopBody(
             packs: c.packs,
-            activeEntitlements: billing.activeEntitlements.isEmpty
-                ? c.activeEntitlements
-                : billing.activeEntitlements,
+            // Set vide autoritaire : une fois chargé, il fait foi même
+            // s'il est vide (refund). Jamais de repli stale via isEmpty.
+            activeEntitlements: billing.entitlementsLoaded
+                ? billing.activeEntitlements
+                : c.activeEntitlements,
             productIds: ids,
             onBuy: controller.buySku,
             onRestore: controller.restore,
@@ -231,7 +233,14 @@ class _ShopBody extends ConsumerWidget {
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: billing.supported && billing.storeAvailable
+                // Restore exige la readiness backend (vérification
+                // indisponible => visiblement désactivé).
+                onPressed:
+                    billing.initialized &&
+                        billing.supported &&
+                        billing.storeAvailable &&
+                        billing.backendReady &&
+                        !billing.syncing
                     ? () => onRestore()
                     : null,
                 child: Text(l10n.shopRestorePurchases),
@@ -240,7 +249,10 @@ class _ShopBody extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton(
-                onPressed: billing.supported ? () => onRefresh() : null,
+                // Refresh reste utilisable pour retenter la readiness.
+                onPressed: billing.supported && !billing.syncing
+                    ? () => onRefresh()
+                    : null,
                 child: Text(l10n.shopRefreshPurchases),
               ),
             ),
