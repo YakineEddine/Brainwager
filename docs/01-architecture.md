@@ -27,7 +27,7 @@
 | i18n | `flutter_localizations` + `gen-l10n` (ARB `app_fr/en/ar.arb`, RTL automatique) | Officiel, sans dépendance tierce |
 | Backend | `supabase_flutter` 2.x | Auth anonyme + Postgres + Realtime |
 | Ads | `google_mobile_ads` + `user_messaging_platform` (UMP RGPD) | AdMob + consentement UE |
-| Billing | `in_app_purchase` + Edge Function `verify-purchase` + table `entitlements` | Validation serveur du purchase token Play, restauration incluse |
+| Billing | `in_app_purchase` (client, ticket suivant) + Edge Function `verify-purchase` + Google Play Developer API + ledger privé `google_play_purchases` + `entitlements` (SELECT own only) | Validation serveur avant entitlement, token anti-rejeu, acknowledgement requis |
 | Crashs | `sentry_flutter` (désactivable) ou Play Console seule | Aucun Firebase |
 | Anim | `confetti`, `flutter_animate` | Podium, classements, compte à rebours |
 | Son | `audioplayers` (sons synthétisés maison, toggle) | Zéro asset copié |
@@ -36,11 +36,16 @@
 Décision senior : **pas de code-gen Riverpod / Freezed en Phase 1**. Ajout en
 Phase 4 seulement si les modèles deviennent lourds.
 
-Sécurité achats (correction 1) : `profiles` ne contient AUCUN flag premium.
+Sécurité achats (correction 1, autorité backend 0013) : `profiles` ne contient AUCUN flag premium.
 `entitlements(user_id, sku, is_active, verified_at)` n'a aucune policy
-INSERT/UPDATE pour `authenticated`. Seule l'Edge Function (service_role) écrit
-après validation du purchase token auprès de l'API Google Play Developer.
-Restauration = même fonction en mode `restore`.
+INSERT/UPDATE pour `authenticated` (SELECT own only, server-write only). Produits
+one-time NON-CONSUMABLE. Le serveur vérifie via Google Play Developer API avant
+tout entitlement ; token rejoué protégé (`purchase_token` PK, `verify` strict,
+`restore` avec transfert anon contrôlé) ; acknowledgement serveur requis.
+Stack billing : client Flutter `in_app_purchase` (ticket suivant) → Edge Function
+`verify-purchase` (seule autorité app-facing) → API Play → ledger privé
+`google_play_purchases` (backend-only, zéro accès client) → `entitlements`.
+Restauration = même fonction en mode `restore` ; `sync` revalide les tokens stockés.
 
 ## 3. Structure dossiers (feature-first)
 

@@ -4,7 +4,7 @@ Conventions : `uuid` PK `gen_random_uuid()`, `timestamptz` UTC (`now()`),
 contenus localisés FR / EN / AR (`*_fr`, `*_en`, `*_ar` selon les tables).
 Tout en `public`. RLS activé partout.
 
-## 1. Schéma (11 tables)
+## 1. Schéma (12 tables, dont google_play_purchases backend-only, migration 0013)
 
 ```text
 profiles 1──* packs (owner)          packs 1──* questions 1──1 question_answers_private
@@ -12,6 +12,7 @@ packs 1──* questions                 games *──1 packs      games 1──
 games 1──* teams 1──* players         games 1──* players
 players 1──* player_answers           players 1──* wagers
 packs 1──* pack_reports               profiles 1──* entitlements
+profiles 1──* google_play_purchases (★ SENSITIVE / backend-only, migration 0013)
 ```
 
 ### profiles — 1 ligne par user anon (sans aucun flag premium)
@@ -22,17 +23,64 @@ packs 1──* pack_reports               profiles 1──* entitlements
 - Justification : `is_premium` / `no_ads` modifiables par le client sont une faille.
   Les droits sont dans `entitlements`.
 
-### entitlements — droits validés serveur uniquement (correction 1)
+### entitlements — droits validés serveur uniquement (correction 1, autorité 0013)
 - `id uuid PK`, `user_id uuid → profiles ON DELETE CASCADE`,
   `sku text NOT NULL` (ex. `pack_cinema_xxl`, `remove_ads`),
   `is_active bool DEFAULT true`, `verified_at timestamptz DEFAULT now()`,
   `UNIQUE(user_id, sku)`.
-- RLS : `SELECT` uniquement `auth.uid() = user_id`. **Aucune policy INSERT/UPDATE/
-  DELETE pour `anon`/`authenticated`.** Écriture réservée à `service_role`,
-  donc à l'Edge Function `verify-purchase` qui valide le purchase token
-  auprès de l'API Google Play Developer puis upsert.
+- RLS : `SELECT` own uniquement (`auth.uid() = user_id`). **Aucune policy INSERT/UPDATE/
+  DELETE pour `anon`/`authenticated`.** Écriture réservée à `service_role`
+  (server-write only), donc à l'Edge Function `verify-purchase` qui valide le purchase token
+  auprès de l'API Google Play Developer puis applique via `apply_google_play_purchase`.
+  `entitlements` reste SELECT-own only côté client.
 - Restauration des achats : même Edge Function en mode `restore` (rejoue la
   validation des tokens connus / `queryPurchases` côté client puis vérif serveur).
+
+### google_play_purchases — ★ SENSITIVE / backend-only (migration 0013)
+- `purchase_token text PK` (globalement unique, protection anti-rejeu),
+  `user_id uuid → profiles ON DELETE SET NULL` (peut devenir NULL si l'ancien
+  profil anonyme disparaît), `sku text NOT NULL`, `order_id text NULL`,
+  `obfuscated_account_id text NULL`, `purchase_state text NOT NULL
+  CHECK IN ('PURCHASED','PENDING','CANCELLED')`,
+  `acknowledgement_state text NOT NULL`, `consumption_state text NOT NULL`,
+  `last_verified_at timestamptz DEFAULT now()`, `created_at`, `updated_at`.
+- RLS activé avec **zéro policy client** et **zéro privilège `anon`/`authenticated`**
+  (`REVOKE ALL ... FROM public, anon, authenticated`). Ledger privé illisible
+  et inscriptible uniquement via `service_role`.
+- `apply_google_play_purchase(...)` est service-only (`GRANT EXECUTE` à
+  `service_role` uniquement, `REVOKE` pour `public`/`anon`/`authenticated`).
+  Ce n'est PAS une RPC applicative : Flutter ne doit jamais l'invoquer directement.
+  Seule l'Edge Function `verify-purchase` (autorité billing applicative unique)
+  l'appelle après validation Google Play.
+- Seuls les SKU premium officiels connus ou `remove_ads` sont acceptés
+  (`billing-sku-not-allowed` sinon). Produits one-time NON-CONSUMABLE.
+  En mode `verify`, un token déjà rattaché à un autre `user_id` est rejeté
+  (`purchase-token-already-claimed`) : rejeu inter-profil bloqué.
+- Entitlements accordées/révoquées atomiquement avec le ledger dans la même
+  fonction. En `restore`, transfert possible du token/entitlement depuis un
+  profil anonyme obsolète vers le profil courant ; l'ancien entitlement actif
+  est désactivé uniquement si aucun autre token valide ne le soutient.
+
+### Contrat sécurité billing (Flutter vs backend)
+- Les purchase tokens Google Play sont backend-sensitive.
+- Flutter ne doit JAMAIS : écrire `entitlements`, écrire `google_play_purchases`,
+  invoquer `apply_google_play_purchase` directement, décider lui-même qu'un
+  achat est valide, débloquer un pack depuis `PurchaseStatus` seul.
+- Flutter peut uniquement : recevoir les données d'achat Play, envoyer
+  `{sku, purchaseToken, mode}` à `verify-purchase`, puis lire ses propres
+  `entitlements` après vérification serveur.
+- L'Edge Function + `service_role` reste l'autorité.
+
+### Restauration comptes anonymes (spécifique Brainwager)
+- Les users sont actuellement anonymes. Une réinstallation peut produire un
+  NOUVEAU UUID Supabase. Ne jamais supposer que l'identité anon survit à
+  un uninstall.
+- Nouvel achat : le client pose `obfuscatedExternalAccountId =
+  SHA-256(UUID Supabase courant)` ; `mode=verify` vérifie l'égalité exacte.
+- Restore : propriété/token Google Play re-vérifié côté serveur ; le backend
+  peut transférer le token/entitlement de l'ancien profil anon obsolète vers
+  le profil courant ; l'ancien entitlement actif est désactivé quand aucun
+  autre token valide ne le soutient.
 
 ### packs — officiels + UGC (v1 sans image uploadée)
 - `id uuid PK`, `owner_id uuid → profiles (NULL si officiel)`,
@@ -192,9 +240,18 @@ packs 1──* pack_reports               profiles 1──* entitlements
 Toutes : `SECURITY DEFINER`, `SET search_path = public`, `REVOKE` public + `GRANT`
 ciblé, contrôle `auth.uid()` interne.
 
-Edge Function `verify-purchase` (Deno, service_role) : reçoit `{sku, purchaseToken}`,
-valide auprès de Google Play Developer API, upsert `entitlements`, retourne droits.
-Mode `restore` : revalide et réactive.
+Edge Function `verify-purchase` (Deno, service_role, slug `verify-purchase`,
+version 1, ACTIVE, `verify_jwt: true`) : seule autorité billing app-facing.
+Utilisateurs authentifiés uniquement. Package Google Play :
+`com.yakineeddine.brainwager`. Validation via
+`purchases.productsv2.getproductpurchasev2`, tentative d'acknowledgement
+serveur, fail-closed si credentials Google absents (secret
+`GOOGLE_SERVICE_ACCOUNT_JSON` attendu, jamais commité).
+Modes `verify` / `restore` / `sync` : `verify` exige que le SHA-256 du user id
+Supabase égale `obfuscatedExternalAccountId` ; `restore` permet le transfert
+de profil anonyme (token/entitlement déplacé, ancien entitlement désactivé
+sans autre token valide) ; `sync` revalide les tokens stockés. `apply_google_play_purchase`
+n'est PAS une RPC app : service-only, jamais invoquée par Flutter.
 
 ## 3. Realtime (sans tick)
 

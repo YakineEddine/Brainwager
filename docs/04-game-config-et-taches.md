@@ -83,7 +83,13 @@ aligné SQL 0012.
 Phase 3D partage/import/deep-link/signalement UI terminée (lookup RPC
 uniquement, deep links custom scheme, report RPC uniquement, aucune
 persistance locale d'import).
-Restent : purchases, 5 packs de production.
+Phase 3E autorité backend billing terminée (migration 0013 +
+`verify-purchase` déployés : ledger `google_play_purchases` backend-only,
+`apply_google_play_purchase` service-only, Edge Function seule autorité).
+NEXT : UI/client Flutter `in_app_purchase` toujours à faire ;
+configuration Play Console (produits + compte de service) toujours requise ;
+5 packs de production toujours requis. Aucun achat Play réel validé
+manuellement pour l'instant.
 Phase 3 toujours NON complète.
 
 ### Phase 4 — Équipes, TV, correction manuelle, podium
