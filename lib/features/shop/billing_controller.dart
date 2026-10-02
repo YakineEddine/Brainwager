@@ -148,6 +148,14 @@ class BillingController extends Notifier<BillingUiState> {
   /// Tokens en cours de vérification (mémoire seule, anti-doublons).
   final Set<String> verifyingTokens = <String>{};
 
+  /// Union de tous les IDs produits demandés (Shop + détails packs).
+  /// Uniquement additive : une requête étroite ne rétrécit jamais le cache.
+  final Set<String> _requestedProductIds = <String>{};
+
+  /// Génération du chargement produits : un résultat supplanté par un
+  /// chargement plus récent est ignoré (pas de régression large -> étroit).
+  int _productLoadGeneration = 0;
+
   @override
   BillingUiState build() {
     ref.onDispose(() {
@@ -162,11 +170,13 @@ class BillingController extends Notifier<BillingUiState> {
   BillingBackend get _backend => ref.read(billingBackendProvider);
 
   /// Init unique : abonnement stream, dispo store, produits, sync readiness.
-  /// Un 2e appel ne duplique jamais l'abonnement.
+  /// Un 2e appel ne duplique jamais l'abonnement. Chaque appel élargit
+  /// l'union des IDs demandés ; le cache produits ne rétrécit jamais.
   Future<void> ensureInitialized({required Set<String> productIds}) async {
+    _requestedProductIds.addAll(productIds);
     if (_subscribed) {
-      // Rafraîchir les produits si la liste change, sans réabonner.
-      await _loadProducts(productIds);
+      // Produits : recharger l'union, sans réabonner.
+      await _loadProductsUnion();
       return;
     }
     _subscribed = true;
@@ -194,25 +204,63 @@ class BillingController extends Notifier<BillingUiState> {
     );
     final available = await _gateway.isAvailable();
     state = state.copyWith(storeAvailable: available);
-    await _loadProducts(productIds);
+    await _loadProductsUnion();
     await refreshReadiness();
     state = state.copyWith(initialized: true);
   }
 
-  Future<void> _loadProducts(Set<String> ids) async {
+  /// Charge l'UNION des IDs demandés et reconstruit le cache depuis le
+  /// résultat complet : fusion des trouvés, éviction explicite des
+  /// notFound (jamais de "found" stale pour un id déclaré notFound).
+  /// Sécurité concurrence : génération monotone (résultat supplanté ignoré)
+  /// + re-requête si l'union a grandi pendant le vol.
+  Future<void> _loadProductsUnion() async {
     if (!state.supported) return;
-    if (ids.isEmpty) {
-      state = state.copyWith(productsById: {}, notFoundIds: {});
-      return;
-    }
-    try {
-      final res = await _gateway.queryProducts(ids);
+    while (true) {
+      final query = Set<String>.of(_requestedProductIds);
+      if (query.isEmpty) {
+        state = state.copyWith(productsById: {}, notFoundIds: {});
+        return;
+      }
+      final generation = ++_productLoadGeneration;
+      late final ProductDetailsResponse res;
+      try {
+        res = await _gateway.queryProducts(query);
+      } catch (e) {
+        if (generation != _productLoadGeneration) return;
+        state = state.copyWith(lastErrorCode: () => billingErrorCode(e));
+        return;
+      }
+      if (generation != _productLoadGeneration) return;
+      if (_requestedProductIds.length != query.length ||
+          !_requestedProductIds.containsAll(query)) {
+        // L'union a grandi pendant la requête : recharger l'union complète.
+        continue;
+      }
+      final found = {for (final p in res.productDetails) p.id: p};
+      final notFound = res.notFoundIDs.toSet();
+      final prevProducts = state.productsById;
+      final prevNotFound = state.notFoundIds;
+      final nextProducts = <String, ProductDetails>{};
+      final nextNotFound = <String>{};
+      for (final id in query) {
+        if (notFound.contains(id)) {
+          // Éviction explicite : pas de found stale pour un notFound.
+          nextNotFound.add(id);
+        } else if (found.containsKey(id)) {
+          nextProducts[id] = found[id]!;
+        } else {
+          // Non rapporté ce tour : conserver la connaissance précédente.
+          final prev = prevProducts[id];
+          if (prev != null) nextProducts[id] = prev;
+          if (prevNotFound.contains(id)) nextNotFound.add(id);
+        }
+      }
       state = state.copyWith(
-        productsById: {for (final p in res.productDetails) p.id: p},
-        notFoundIds: res.notFoundIDs.toSet(),
+        productsById: nextProducts,
+        notFoundIds: nextNotFound,
       );
-    } catch (e) {
-      state = state.copyWith(lastErrorCode: () => billingErrorCode(e));
+      return;
     }
   }
 
