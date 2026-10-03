@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/badges.dart';
 import '../../shared/widgets/brain_card.dart';
 import '../../shared/widgets/brain_scaffold.dart';
+import '../../shared/widgets/entrance.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/state_views.dart';
 import '../shop/billing_controller.dart';
@@ -52,36 +54,16 @@ class PacksScreen extends ConsumerWidget {
         data: (c) {
           if (c.packs.isEmpty) return BrainEmpty(message: l10n.packEmpty);
           final lang = _lang(context);
-          final textTheme = Theme.of(context).textTheme;
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              for (final p in c.packs) ...[
-                BrainCard(
-                  onTap: () => context.push('/packs/${p.id}'),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        p.localizedTitle(lang),
-                        style: textTheme.titleMedium,
-                      ),
-                      if (p.localizedDescription(lang).isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            p.localizedDescription(lang),
-                            style: textTheme.bodyMedium,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      const SizedBox(height: 8),
-                      _PackBadges(
-                        pack: p,
-                        locked: !p.isAccessible(c.activeEntitlements),
-                      ),
-                    ],
+              for (var i = 0; i < c.packs.length; i++) ...[
+                BrainEntrance(
+                  delayMs: (i * 60).clamp(0, 300),
+                  child: _PackCatalogCard(
+                    pack: c.packs[i],
+                    lang: lang,
+                    locked: !c.packs[i].isAccessible(c.activeEntitlements),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -89,6 +71,62 @@ class PacksScreen extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _PackCatalogCard extends StatelessWidget {
+  final PackSummary pack;
+  final String lang;
+  final bool locked;
+  const _PackCatalogCard({
+    required this.pack,
+    required this.lang,
+    required this.locked,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    // Premium verrouillé = désirable : bordure or + titre fort.
+    // UGC possédé : badge turquoise via _PackBadges (inchangé).
+    return BrainCard(
+      featured: pack.isPremium && locked,
+      onTap: () => context.push('/packs/${pack.id}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  pack.localizedTitle(lang),
+                  style: pack.isPremium && locked
+                      ? textTheme.titleLarge?.copyWith(color: BrainColors.gold)
+                      : textTheme.titleMedium,
+                ),
+              ),
+              if (locked)
+                const Padding(
+                  padding: EdgeInsetsDirectional.only(start: 8),
+                  child: Icon(Icons.lock_outline, size: 20),
+                ),
+            ],
+          ),
+          if (pack.localizedDescription(lang).isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                pack.localizedDescription(lang),
+                style: textTheme.bodyMedium,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          const SizedBox(height: 8),
+          _PackBadges(pack: pack, locked: locked),
+        ],
       ),
     );
   }
@@ -209,19 +247,27 @@ class PackDetailScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               SectionHeader(title: l10n.packPreview),
               preview.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const BrainLoading(),
                 error: (_, _) => Text(l10n.packLoadError),
                 data: (rows) {
                   if (rows.isEmpty) return Text(l10n.packEmpty);
-                  return Column(
-                    children: [
-                      for (final r in rows)
-                        ListTile(
-                          leading: Text('#${r.idx + 1}'),
-                          title: Text(r.localizedPrompt(lang)),
-                          subtitle: Text('${r.category} · ${r.difficulty}/3'),
-                        ),
-                    ],
+                  return BrainCard(
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < rows.length; i++) ...[
+                          ListTile(
+                            leading: Text('#${rows[i].idx + 1}'),
+                            title: Text(rows[i].localizedPrompt(lang)),
+                            subtitle: Text(
+                              '${rows[i].category} · ${rows[i].difficulty}/3',
+                            ),
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                          ),
+                          if (i != rows.length - 1) const Divider(height: 1),
+                        ],
+                      ],
+                    ),
                   );
                 },
               ),

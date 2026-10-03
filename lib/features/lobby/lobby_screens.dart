@@ -9,6 +9,8 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/brain_buttons.dart';
 import '../../shared/widgets/brain_card.dart';
 import '../../shared/widgets/brain_scaffold.dart';
+import '../../shared/widgets/brand.dart';
+import '../../shared/widgets/entrance.dart';
 import '../../shared/widgets/section_header.dart';
 import '../packs/pack_providers.dart';
 import '../packs/pack_repository.dart';
@@ -27,47 +29,62 @@ class HomeScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Hero : wordmark temporaire + tagline (pas de logo final ici).
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.appTitle.toUpperCase(),
-                  style: textTheme.displaySmall,
-                ),
-                const SizedBox(height: 4),
-                Text(l10n.tagline, style: textTheme.bodyLarge),
-              ],
+          // Marque : wordmark actuel, logo final branché via BrainBrand
+          // dès que les assets arrivent (aucun faux visuel en attendant).
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: BrainBrand(variant: BrainBrandVariant.full, centered: true),
+          ),
+          Center(child: Text(l10n.tagline, style: textTheme.bodyLarge)),
+          const SizedBox(height: 20),
+          // Actions primaires : Créer / Rejoindre dominent visuellement.
+          BrainEntrance(
+            delayMs: 0,
+            child: BrainMenuCard(
+              onTap: () => context.go('/create'),
+              icon: Icons.sports_esports,
+              iconColor: BrainColors.electricViolet,
+              title: l10n.createGame,
             ),
           ),
-          BrainMenuCard(
-            onTap: () => context.go('/create'),
-            icon: Icons.sports_esports,
-            iconColor: BrainColors.electricViolet,
-            title: l10n.createGame,
+          const SizedBox(height: 12),
+          BrainEntrance(
+            delayMs: 70,
+            child: BrainMenuCard(
+              onTap: () => context.go('/join'),
+              icon: Icons.group_add,
+              iconColor: BrainColors.turquoise,
+              title: l10n.joinGame,
+            ),
           ),
           const SizedBox(height: 12),
-          BrainMenuCard(
-            onTap: () => context.go('/join'),
-            icon: Icons.group_add,
-            iconColor: BrainColors.turquoise,
-            title: l10n.joinGame,
-          ),
-          const SizedBox(height: 12),
-          BrainMenuCard(
-            onTap: () => context.go('/packs'),
-            icon: Icons.style,
-            iconColor: BrainColors.gold,
-            title: l10n.packs,
-          ),
-          const SizedBox(height: 12),
-          BrainMenuCard(
-            onTap: () => context.go('/shop'),
-            icon: Icons.shopping_bag,
-            iconColor: BrainColors.coral,
-            title: l10n.shop,
+          // Actions secondaires : Packs / Boutique en duo compact.
+          Row(
+            children: [
+              Expanded(
+                child: BrainEntrance(
+                  delayMs: 140,
+                  child: BrainMenuCard(
+                    onTap: () => context.go('/packs'),
+                    icon: Icons.style,
+                    iconColor: BrainColors.gold,
+                    title: l10n.packs,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: BrainEntrance(
+                  delayMs: 210,
+                  child: BrainMenuCard(
+                    onTap: () => context.go('/shop'),
+                    icon: Icons.shopping_bag,
+                    iconColor: BrainColors.coral,
+                    title: l10n.shop,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

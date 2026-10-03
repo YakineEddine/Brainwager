@@ -6,8 +6,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/utils/game_errors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/badges.dart';
+import '../../shared/widgets/brain_buttons.dart';
+import '../../shared/widgets/brain_card.dart';
+import '../../shared/widgets/brain_scaffold.dart';
+import '../../shared/widgets/section_header.dart';
+import '../../shared/widgets/state_views.dart';
 import 'pack_repository.dart';
 import 'report_pack_dialog.dart';
 import 'shared_pack.dart';
@@ -55,78 +62,98 @@ class _SharedPackScreenState extends ConsumerState<SharedPackScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final lang = _lang();
-    return Scaffold(
+    return BrainScaffold(
       appBar: AppBar(title: Text(l10n.sharedPack)),
       body: FutureBuilder<({SharedPack pack, Set<String> entitlements})>(
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return const BrainLoading();
           }
           if (snap.hasError || !snap.hasData) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(friendlyUgcError(
-                      snap.error ?? Exception('pack-not-found'), lang)),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () => setState(() => _future = _load()),
-                    child: Text(l10n.packRetry),
-                  ),
-                ],
+            return BrainError(
+              message: friendlyUgcError(
+                snap.error ?? Exception('pack-not-found'),
+                lang,
               ),
+              onRetry: () => setState(() => _future = _load()),
+              retryLabel: l10n.packRetry,
             );
           }
           final pack = snap.data!.pack;
-          final locked =
-              !pack.isAccessible(snap.data!.entitlements);
-          final badge = pack.isOwned
-              ? l10n.packMine
-              : pack.isOfficial
-                  ? l10n.packOfficial
-                  : l10n.sharedPack;
+          final locked = !pack.isAccessible(snap.data!.entitlements);
+          final textTheme = Theme.of(context).textTheme;
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(
-                pack.localizedTitle(lang),
-                style: Theme.of(context).textTheme.headlineSmall,
+              BrainHeroPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      pack.localizedTitle(lang),
+                      style: textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    BrainBadgeRow(
+                      badges: [
+                        BrainBadge(
+                          label: pack.isOwned
+                              ? l10n.packMine
+                              : pack.isOfficial
+                              ? l10n.packOfficial
+                              : l10n.sharedPack,
+                          kind: pack.isOwned
+                              ? BrainBadgeKind.mine
+                              : BrainBadgeKind.official,
+                        ),
+                        if (pack.isPremium)
+                          BrainBadge(
+                            label: locked
+                                ? '${l10n.packPremium} · ${l10n.packLocked}'
+                                : l10n.packPremium,
+                            kind: locked
+                                ? BrainBadgeKind.locked
+                                : BrainBadgeKind.premium,
+                          ),
+                      ],
+                    ),
+                    if (pack.localizedDescription(lang).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(pack.localizedDescription(lang)),
+                      ),
+                    const SizedBox(height: 8),
+                    Text('${pack.questionCount}', style: textTheme.bodyMedium),
+                  ],
+                ),
               ),
-              const SizedBox(height: 4),
-              Text(badge),
-              if (pack.localizedDescription(lang).isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(pack.localizedDescription(lang)),
-                ),
-              const SizedBox(height: 8),
-              Text('${pack.questionCount}'),
-              if (pack.isPremium) ...[
-                const SizedBox(height: 8),
-                Text(locked
-                    ? '${l10n.packPremium} · ${l10n.packLocked}'
-                    : l10n.packPremium),
-              ],
               const SizedBox(height: 16),
-              Text(l10n.packPreview,
-                  style: Theme.of(context).textTheme.titleMedium),
-              for (final q in pack.questions)
-                _PromptTile(
-                  prompt: q.localizedPrompt(lang),
-                  rtl: lang == 'ar' &&
-                      q.promptAr.trim().isNotEmpty,
-                  category: q.category,
-                  difficulty: q.difficulty,
-                  index: q.idx,
+              SectionHeader(title: l10n.packPreview),
+              BrainCard(
+                child: Column(
+                  children: [
+                    for (var i = 0; i < pack.questions.length; i++) ...[
+                      _PromptTile(
+                        prompt: pack.questions[i].localizedPrompt(lang),
+                        rtl:
+                            lang == 'ar' &&
+                            pack.questions[i].promptAr.trim().isNotEmpty,
+                        category: pack.questions[i].category,
+                        difficulty: pack.questions[i].difficulty,
+                        index: pack.questions[i].idx,
+                      ),
+                      if (i != pack.questions.length - 1)
+                        const Divider(height: 1),
+                    ],
+                  ],
                 ),
+              ),
               const SizedBox(height: 16),
-              ElevatedButton(
+              BrainPrimaryButton(
                 onPressed: locked
                     ? null
-                    : () => context.go(
-                        '/create?share=${pack.shareCode}'),
+                    : () => context.go('/create?share=${pack.shareCode}'),
                 child: Text(l10n.packCreateWith),
               ),
               if (locked)
@@ -134,16 +161,17 @@ class _SharedPackScreenState extends ConsumerState<SharedPackScreen> {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(l10n.packComingSoon),
                 ),
+              const SizedBox(height: 8),
               if (pack.isOwned)
-                OutlinedButton(
-                  onPressed: () =>
-                      context.push('/packs/edit/${pack.id}'),
+                BrainSecondaryButton(
+                  onPressed: () => context.push('/packs/edit/${pack.id}'),
+                  expanded: true,
                   child: Text(l10n.packEdit),
                 )
               else
-                OutlinedButton(
-                  onPressed: () =>
-                      showReportPackDialog(context, pack.id),
+                BrainSecondaryButton(
+                  onPressed: () => showReportPackDialog(context, pack.id),
+                  expanded: true,
                   child: Text(l10n.packReport),
                 ),
             ],
@@ -175,8 +203,7 @@ class _PromptTile extends StatelessWidget {
       leading: Text('#${index + 1}'),
       title: Text(
         prompt,
-        textDirection:
-            rtl ? TextDirection.rtl : TextDirection.ltr,
+        textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
         textAlign: rtl ? TextAlign.right : TextAlign.left,
       ),
       subtitle: Text('$category · $difficulty/3'),

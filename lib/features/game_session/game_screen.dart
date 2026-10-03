@@ -480,7 +480,25 @@ class LobbyWaitingView extends StatelessWidget {
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('$presenceCount', style: textTheme.titleLarge),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.person,
+                          size: 20,
+                          color: BrainColors.turquoise,
+                        ),
+                        const SizedBox(width: 4),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          child: Text(
+                            '$presenceCount',
+                            key: ValueKey(presenceCount),
+                            style: textTheme.titleLarge,
+                          ),
+                        ),
+                      ],
+                    ),
                     Text(
                       l10n.onlineCount(presenceCount),
                       style: textTheme.bodySmall,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/badges.dart';
 import '../../shared/widgets/brain_card.dart';
@@ -203,6 +204,7 @@ class _ShopBody extends ConsumerWidget {
       final textTheme = Theme.of(context).textTheme;
       return BrainCard(
         onTap: onTap,
+        featured: !owned && price != null,
         child: Row(
           children: [
             Expanded(
@@ -216,11 +218,15 @@ class _ShopBody extends ConsumerWidget {
                       label: l10n.shopOwned,
                       kind: BrainBadgeKind.owned,
                     )
-                  else
+                  else if (price != null)
                     Text(
-                      price ?? l10n.shopNoProducts,
-                      style: textTheme.bodyMedium,
-                    ),
+                      price,
+                      style: textTheme.titleLarge?.copyWith(
+                        color: BrainColors.gold,
+                      ),
+                    )
+                  else
+                    Text(l10n.shopNoProducts, style: textTheme.bodyMedium),
                 ],
               ),
             ),

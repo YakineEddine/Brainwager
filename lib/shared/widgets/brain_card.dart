@@ -6,20 +6,33 @@ import '../../app/design_tokens.dart';
 import '../../app/theme.dart';
 
 /// Carte standard (thème Card + padding homogène).
+/// [featured] : bordure or pour les contenus premium désirables
+/// (packs premium verrouillés) — jamais pour un état d'erreur.
 class BrainCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
+  final bool featured;
   const BrainCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(BrainSpacing.md),
     this.onTap,
+    this.featured = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final card = Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BrainRadius.lg),
+        side: BorderSide(
+          color: featured
+              ? BrainColors.gold.withValues(alpha: 0.65)
+              : BrainColors.outline,
+          width: featured ? 1.5 : 1,
+        ),
+      ),
       child: Padding(padding: padding, child: child),
     );
     if (onTap == null) return card;

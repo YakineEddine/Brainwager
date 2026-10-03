@@ -6,8 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../app/theme.dart';
 import '../../core/utils/game_errors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/brain_buttons.dart';
+import '../../shared/widgets/brain_card.dart';
+import '../../shared/widgets/brain_scaffold.dart';
+import '../../shared/widgets/section_header.dart';
+import '../../shared/widgets/state_views.dart';
 import 'pack_providers.dart';
 import 'shared_pack.dart';
 import 'ugc_draft.dart';
@@ -90,8 +97,7 @@ class _QuestionForm {
       aliasesFr: parseAliasesLines(aliasesFr.text),
       aliasesEn: parseAliasesLines(aliasesEn.text),
       aliasesAr: parseAliasesLines(aliasesAr.text),
-      category:
-          category.text.trim().isEmpty ? 'general' : category.text.trim(),
+      category: category.text.trim().isEmpty ? 'general' : category.text.trim(),
       difficulty: difficulty,
       matchMode: matchMode,
     );
@@ -127,8 +133,7 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
   final _descFr = TextEditingController();
   final _descEn = TextEditingController();
   final _descAr = TextEditingController();
-  List<_QuestionForm> _forms =
-      List.generate(11, (_) => _QuestionForm());
+  List<_QuestionForm> _forms = List.generate(11, (_) => _QuestionForm());
   bool _termsAccepted = false;
   bool _loading = false;
   bool _saving = false;
@@ -178,8 +183,7 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
       _loadError = null;
     });
     try {
-      final draft =
-          await UgcPackRepository().loadForEdit(widget.packId!);
+      final draft = await UgcPackRepository().loadForEdit(widget.packId!);
       if (!mounted) return;
       for (final f in _forms) {
         f.dispose();
@@ -223,8 +227,7 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
     final l10n = AppLocalizations.of(context)!;
     final draft = _collectDraft();
     final errors = validateUgcPack(draft);
-    if (errors.isNotEmpty ||
-        (_isCreate && !_termsAccepted)) {
+    if (errors.isNotEmpty || (_isCreate && !_termsAccepted)) {
       setState(() {
         _validationErrors = [
           ...errors,
@@ -245,8 +248,10 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
       final repo = UgcPackRepository();
       // Après création, l'id retourné devient l'identité d'édition :
       // tout save suivant est un UPDATE (jamais re-CREATE).
-      final targetId =
-          resolveEditTarget(packId: widget.packId, createdId: _createdId);
+      final targetId = resolveEditTarget(
+        packId: widget.packId,
+        createdId: _createdId,
+      );
       final UgcSaveResult res;
       if (shouldUpdate(packId: widget.packId, createdId: _createdId) &&
           targetId != null) {
@@ -267,9 +272,8 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
           _createdId = createdId;
           _shareCode = res.shareCode;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.editorSaved)),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.editorSaved)));
         context.replace(editRouteFor(createdId));
         return;
       }
@@ -291,20 +295,17 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
     await Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.editorCodeCopied)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(l10n.editorCodeCopied)));
   }
 
   /// Copie le lien de partage (URI autour du code serveur, jamais généré).
   Future<void> _copyLink(String code) async {
-    await Clipboard.setData(
-        ClipboardData(text: shareLinkFor(code)));
+    await Clipboard.setData(ClipboardData(text: shareLinkFor(code)));
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.linkCopied)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(l10n.linkCopied)));
   }
 
   void _addQuestion() {
@@ -348,163 +349,192 @@ class _UgcEditorScreenState extends ConsumerState<UgcEditorScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final lang = Localizations.localeOf(context).languageCode;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isCreate ? l10n.packCreate : l10n.packEdit),
-      ),
+    return BrainScaffold(
+      appBar: AppBar(title: Text(_isCreate ? l10n.packCreate : l10n.packEdit)),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const BrainLoading()
           : _loadError != null
-              ? Center(
+          ? BrainError(
+              message: _loadError!,
+              onRetry: _reloadForEdit,
+              retryLabel: l10n.packRetry,
+            )
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                BrainCard(
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_loadError!),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: _reloadForEdit,
-                        child: Text(l10n.packRetry),
+                      TextField(
+                        controller: _titleFr,
+                        enabled: mutationEnabled(saving: _saving),
+                        onChanged: (_) => _markDirty(),
+                        textDirection: TextDirection.ltr,
+                        decoration: InputDecoration(
+                          labelText: l10n.editorTitleFr,
+                        ),
+                      ),
+                      TextField(
+                        controller: _titleEn,
+                        enabled: mutationEnabled(saving: _saving),
+                        onChanged: (_) => _markDirty(),
+                        textDirection: TextDirection.ltr,
+                        decoration: InputDecoration(
+                          labelText: l10n.editorTitleEn,
+                        ),
+                      ),
+                      TextField(
+                        controller: _titleAr,
+                        enabled: mutationEnabled(saving: _saving),
+                        onChanged: (_) => _markDirty(),
+                        textDirection: TextDirection.rtl,
+                        textAlign: TextAlign.right,
+                        decoration: InputDecoration(
+                          labelText: l10n.editorTitleAr,
+                        ),
+                      ),
+                      TextField(
+                        controller: _descFr,
+                        enabled: mutationEnabled(saving: _saving),
+                        onChanged: (_) => _markDirty(),
+                        textDirection: TextDirection.ltr,
+                        decoration: InputDecoration(
+                          labelText: l10n.editorDescFr,
+                        ),
+                      ),
+                      TextField(
+                        controller: _descEn,
+                        enabled: mutationEnabled(saving: _saving),
+                        onChanged: (_) => _markDirty(),
+                        textDirection: TextDirection.ltr,
+                        decoration: InputDecoration(
+                          labelText: l10n.editorDescEn,
+                        ),
+                      ),
+                      TextField(
+                        controller: _descAr,
+                        enabled: mutationEnabled(saving: _saving),
+                        onChanged: (_) => _markDirty(),
+                        textDirection: TextDirection.rtl,
+                        textAlign: TextAlign.right,
+                        decoration: InputDecoration(
+                          labelText: l10n.editorDescAr,
+                        ),
                       ),
                     ],
                   ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    TextField(
-                      controller: _titleFr,
-                      enabled: mutationEnabled(saving: _saving),
-                      onChanged: (_) => _markDirty(),
-                      textDirection: TextDirection.ltr,
-                      decoration: InputDecoration(labelText: l10n.editorTitleFr),
-                    ),
-                    TextField(
-                      controller: _titleEn,
-                      enabled: mutationEnabled(saving: _saving),
-                      onChanged: (_) => _markDirty(),
-                      textDirection: TextDirection.ltr,
-                      decoration: InputDecoration(labelText: l10n.editorTitleEn),
-                    ),
-                    TextField(
-                      controller: _titleAr,
-                      enabled: mutationEnabled(saving: _saving),
-                      onChanged: (_) => _markDirty(),
-                      textDirection: TextDirection.rtl,
-                      textAlign: TextAlign.right,
-                      decoration: InputDecoration(labelText: l10n.editorTitleAr),
-                    ),
-                    TextField(
-                      controller: _descFr,
-                      enabled: mutationEnabled(saving: _saving),
-                      onChanged: (_) => _markDirty(),
-                      textDirection: TextDirection.ltr,
-                      decoration: InputDecoration(labelText: l10n.editorDescFr),
-                    ),
-                    TextField(
-                      controller: _descEn,
-                      enabled: mutationEnabled(saving: _saving),
-                      onChanged: (_) => _markDirty(),
-                      textDirection: TextDirection.ltr,
-                      decoration: InputDecoration(labelText: l10n.editorDescEn),
-                    ),
-                    TextField(
-                      controller: _descAr,
-                      enabled: mutationEnabled(saving: _saving),
-                      onChanged: (_) => _markDirty(),
-                      textDirection: TextDirection.rtl,
-                      textAlign: TextAlign.right,
-                      decoration: InputDecoration(labelText: l10n.editorDescAr),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '${l10n.editorQuestions} (${_forms.length})',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    for (var i = 0; i < _forms.length; i++)
-                      _QuestionCard(
-                        index: i,
-                        total: _forms.length,
-                        form: _forms[i],
-                        enabled: mutationEnabled(saving: _saving),
-                        onRemove: () => _removeQuestion(i),
-                        onMoveUp: i > 0 &&
-                                mutationEnabled(saving: _saving)
-                            ? () => _moveQuestion(i, i - 1)
-                            : null,
-                        onMoveDown: i + 1 < _forms.length &&
-                                mutationEnabled(saving: _saving)
-                            ? () => _moveQuestion(i, i + 1)
-                            : null,
-                        onChanged: _markDirty,
-                      ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: !mutationEnabled(saving: _saving) ||
-                              _forms.length >= 100
-                          ? null
-                          : _addQuestion,
-                      child: Text(l10n.editorAddQuestion),
-                    ),
-                    if (_shareCode != null && _shareCode!.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Text('${l10n.editorShareCode} : $_shareCode'),
-                      Row(
-                        children: [
-                          TextButton(
-                            onPressed: () => _copyCode(_shareCode!),
-                            child: Text(l10n.editorCopyCode),
-                          ),
-                          TextButton(
-                            onPressed: () => _copyLink(_shareCode!),
-                            child: Text(l10n.copyShareLink),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (_isCreate) ...[
-                      const SizedBox(height: 8),
-                      CheckboxListTile(
-                        value: _termsAccepted,
-                        onChanged: mutationEnabled(saving: _saving)
-                            ? (v) {
-                                setState(
-                                    () => _termsAccepted = v ?? false);
-                                _markDirty();
-                              }
-                            : null,
-                        title: Text(l10n.editorTerms),
-                        controlAffinity: ListTileControlAffinity.leading,
-                      ),
-                    ] else ...[
-                      const SizedBox(height: 8),
-                      Text(l10n.editorTermsAccepted),
-                    ],
-                    if (_validationErrors.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(l10n.editorFixErrors),
-                      for (final code in _validationErrors)
+                ),
+                const SizedBox(height: 16),
+                SectionHeader(
+                  title: '${l10n.editorQuestions} (${_forms.length})',
+                ),
+                for (var i = 0; i < _forms.length; i++)
+                  _QuestionCard(
+                    index: i,
+                    total: _forms.length,
+                    form: _forms[i],
+                    enabled: mutationEnabled(saving: _saving),
+                    onRemove: () => _removeQuestion(i),
+                    onMoveUp: i > 0 && mutationEnabled(saving: _saving)
+                        ? () => _moveQuestion(i, i - 1)
+                        : null,
+                    onMoveDown:
+                        i + 1 < _forms.length &&
+                            mutationEnabled(saving: _saving)
+                        ? () => _moveQuestion(i, i + 1)
+                        : null,
+                    onChanged: _markDirty,
+                  ),
+                const SizedBox(height: 8),
+                BrainSecondaryButton(
+                  onPressed:
+                      !mutationEnabled(saving: _saving) || _forms.length >= 100
+                      ? null
+                      : _addQuestion,
+                  expanded: true,
+                  child: Text(l10n.editorAddQuestion),
+                ),
+                if (_shareCode != null && _shareCode!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  BrainCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          '• ${friendlyUgcError(code, lang)}',
+                          '${l10n.editorShareCode} : $_shareCode',
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                    ],
-                    if (_saveError != null) ...[
-                      const SizedBox(height: 8),
-                      Text(_saveError!),
-                    ],
-                    if (_saved) ...[
-                      const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            TextButton(
+                              onPressed: () => _copyCode(_shareCode!),
+                              child: Text(l10n.editorCopyCode),
+                            ),
+                            TextButton(
+                              onPressed: () => _copyLink(_shareCode!),
+                              child: Text(l10n.copyShareLink),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (_isCreate) ...[
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    value: _termsAccepted,
+                    onChanged: mutationEnabled(saving: _saving)
+                        ? (v) {
+                            setState(() => _termsAccepted = v ?? false);
+                            _markDirty();
+                          }
+                        : null,
+                    title: Text(l10n.editorTerms),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                ] else ...[
+                  const SizedBox(height: 8),
+                  Text(l10n.editorTermsAccepted),
+                ],
+                if (_validationErrors.isNotEmpty || _saveError != null) ...[
+                  const SizedBox(height: 8),
+                  BrainCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_validationErrors.isNotEmpty) ...[
+                          Text(l10n.editorFixErrors),
+                          for (final code in _validationErrors)
+                            Text('• ${friendlyUgcError(code, lang)}'),
+                        ],
+                        if (_saveError != null) Text(_saveError!),
+                      ],
+                    ),
+                  ),
+                ],
+                if (_saved) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: BrainColors.turquoise,
+                      ),
+                      const SizedBox(width: 8),
                       Text(l10n.editorSaved),
                     ],
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _saving ||
-                              (_isCreate && !_termsAccepted)
-                          ? null
-                          : _save,
-                      child: Text(l10n.editorSave),
-                    ),
-                  ],
+                  ),
+                ],
+                const SizedBox(height: 12),
+                BrainPrimaryButton(
+                  onPressed: _saving || (_isCreate && !_termsAccepted)
+                      ? null
+                      : _save,
+                  child: Text(l10n.editorSave),
                 ),
+              ],
+            ),
     );
   }
 }
@@ -540,14 +570,18 @@ class _QuestionCardState extends State<_QuestionCard> {
     final f = widget.form;
     // Note visible : les réponses numériques (FR/EN/AR) sont évaluées en
     // exact, même si fuzzy est sélectionné (le serveur tranche aussi).
-    final numeric = isNumericAnswer(f.answerFr.text) ||
+    final numeric =
+        isNumericAnswer(f.answerFr.text) ||
         isNumericAnswer(f.answerEn.text) ||
         isNumericAnswer(f.answerAr.text);
-    Widget field(TextEditingController c, String label,
-        {int lines = 1,
-        bool liveNumeric = false,
-        TextDirection direction = TextDirection.ltr,
-        TextAlign align = TextAlign.left}) {
+    Widget field(
+      TextEditingController c,
+      String label, {
+      int lines = 1,
+      bool liveNumeric = false,
+      TextDirection direction = TextDirection.ltr,
+      TextAlign align = TextAlign.left,
+    }) {
       return TextField(
         controller: c,
         maxLines: lines,
@@ -564,7 +598,8 @@ class _QuestionCardState extends State<_QuestionCard> {
       );
     }
 
-    return Card(
+    return BrainCard(
+      padding: EdgeInsets.zero,
       child: ExpansionTile(
         title: Text('Q${widget.index + 1}'),
         children: [
@@ -611,9 +646,9 @@ class _QuestionCardState extends State<_QuestionCard> {
                       ],
                       onChanged: widget.enabled
                           ? (v) => setState(() {
-                                f.difficulty = v ?? 1;
-                                widget.onChanged();
-                              })
+                              f.difficulty = v ?? 1;
+                              widget.onChanged();
+                            })
                           : null,
                     ),
                     const SizedBox(width: 16),
@@ -632,9 +667,9 @@ class _QuestionCardState extends State<_QuestionCard> {
                       ],
                       onChanged: widget.enabled
                           ? (v) => setState(() {
-                                f.matchMode = v ?? 'fuzzy';
-                                widget.onChanged();
-                              })
+                              f.matchMode = v ?? 'fuzzy';
+                              widget.onChanged();
+                            })
                           : null,
                     ),
                   ],
