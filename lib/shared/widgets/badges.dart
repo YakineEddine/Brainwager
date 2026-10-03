@@ -7,48 +7,46 @@ import '../../app/theme.dart';
 
 enum BrainBadgeKind { premium, locked, official, mine, owned, info, success }
 
-/// Chip unique : remplace les Text() bruts des badges actuels.
+/// Chip unique : fonds pleins à fort contraste (texte 12 px lisible).
+/// Jamais de texte coloré sur fond teinté.
 class BrainBadge extends StatelessWidget {
   final String label;
   final BrainBadgeKind kind;
   const BrainBadge({super.key, required this.label, required this.kind});
 
-  Color get _color {
+  (Color, Color) get _colors {
     switch (kind) {
       case BrainBadgeKind.premium:
-        return BrainColors.gold;
+        return (BrainColors.gold, BrainColors.deepBackground);
       case BrainBadgeKind.locked:
-        return BrainColors.coral;
+        return (BrainColors.coral, BrainColors.deepBackground);
       case BrainBadgeKind.official:
-        return BrainColors.electricViolet;
+        return (BrainColors.electricViolet, BrainColors.textPrimary);
       case BrainBadgeKind.mine:
-        return BrainColors.turquoise;
       case BrainBadgeKind.owned:
-        return BrainColors.turquoise;
       case BrainBadgeKind.success:
-        return BrainColors.turquoise;
+        return (BrainColors.turquoise, BrainColors.deepBackground);
       case BrainBadgeKind.info:
-        return BrainColors.textSecondary;
+        return (BrainColors.surfaceHigh, BrainColors.textPrimary);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final color = _color;
+    final (background, foreground) = _colors;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: BrainSpacing.sm,
         vertical: BrainSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
+        color: background,
         borderRadius: BorderRadius.circular(BrainRadius.pill),
-        border: Border.all(color: color.withValues(alpha: 0.6)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: color,
+          color: foreground,
           fontSize: 12,
           fontWeight: FontWeight.w700,
         ),

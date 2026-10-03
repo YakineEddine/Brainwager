@@ -57,20 +57,31 @@ class _Halo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Lueur radiale douce : le bord s'estompe vers le transparent
+    // (atmosphère, pas de cercle visible). Léger : simple dégradé.
     return IgnorePointer(
       child: Container(
         width: size,
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: color.withValues(alpha: opacity),
+          gradient: RadialGradient(
+            colors: [
+              color.withValues(alpha: opacity),
+              color.withValues(alpha: 0),
+            ],
+            stops: const [0.0, 1.0],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Scaffold standard : fond premium + AppBar transparente.
+/// Scaffold standard : fond premium (dégradé + halos) ET géométrie correcte.
+/// Le fond s'étend visuellement derrière l'AppBar transparente, mais le body
+/// démarre SOUS l'AppBar (pas de extendBodyBehindAppBar, pas de padding
+/// magique). Sans AppBar, le body reste protégé par la SafeArea système.
 // Tous les textes/comportements viennent de l'appelant (aucune chaîne ici).
 class BrainScaffold extends StatelessWidget {
   final PreferredSizeWidget? appBar;
@@ -87,12 +98,15 @@ class BrainScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: appBar,
-      body: BrainBackground(child: SafeArea(child: body)),
-      floatingActionButton: floatingActionButton,
-      bottomNavigationBar: bottomNavigationBar,
+    final bar = appBar;
+    return BrainBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: bar,
+        body: SafeArea(top: bar == null, child: body),
+        floatingActionButton: floatingActionButton,
+        bottomNavigationBar: bottomNavigationBar,
+      ),
     );
   }
 }
