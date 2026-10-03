@@ -641,4 +641,175 @@ void main() {
     expect(row.score, 12);
     expect(sortStandings([row]).single.playerId, 'p9');
   });
+
+  List<GameStanding> fiveRows() => const [
+    GameStanding(
+      playerId: 'a',
+      nickname: 'Alice',
+      score: 100,
+      bestStreak: 1,
+      biggestWagerWon: 5,
+    ),
+    GameStanding(
+      playerId: 'z',
+      nickname: 'Zoe',
+      score: 100,
+      bestStreak: 9,
+      biggestWagerWon: 20,
+    ),
+    GameStanding(
+      playerId: 'm',
+      nickname: 'Mia',
+      score: 80,
+      bestStreak: 0,
+      biggestWagerWon: 0,
+    ),
+    GameStanding(
+      playerId: 'b',
+      nickname: 'Bob',
+      score: 60,
+      bestStreak: 2,
+      biggestWagerWon: 10,
+    ),
+    GameStanding(
+      playerId: 'c',
+      nickname: 'Cid',
+      score: 40,
+      bestStreak: 0,
+      biggestWagerWon: 0,
+    ),
+  ];
+
+  testWidgets('A3) finished 5 joueurs : chaque pseudo rendu UNE fois', (
+    tester,
+  ) async {
+    final sorted = sortStandings(fiveRows());
+    await tester.pumpWidget(
+      _wrap(
+        BrainPodium(
+          standings: sorted,
+          ranks: displayRanks(sorted),
+          currentPlayerId: null,
+        ),
+      ),
+    );
+    await tester.pump();
+    for (final name in ['Alice', 'Zoe', 'Mia', 'Bob', 'Cid']) {
+      expect(find.text(name), findsOneWidget, reason: name);
+    }
+  });
+
+  test('B3) premier unique : helper vrai', () {
+    expect(hasUniqueWinner([1, 2, 3]), isTrue);
+    expect(hasUniqueWinner([1]), isTrue);
+    expect(hasUniqueWinner([]), isFalse);
+  });
+
+  test('C3) deux premiers ex æquo : helper faux', () {
+    expect(hasUniqueWinner([1, 1, 3]), isFalse);
+  });
+
+  testWidgets('D3) quatre #1 : rangs égaux, pas de hero unique', (
+    tester,
+  ) async {
+    const tied = [
+      GameStanding(
+        playerId: 'a',
+        nickname: 'A',
+        score: 100,
+        bestStreak: 0,
+        biggestWagerWon: 0,
+      ),
+      GameStanding(
+        playerId: 'b',
+        nickname: 'B',
+        score: 100,
+        bestStreak: 0,
+        biggestWagerWon: 0,
+      ),
+      GameStanding(
+        playerId: 'c',
+        nickname: 'C',
+        score: 100,
+        bestStreak: 0,
+        biggestWagerWon: 0,
+      ),
+      GameStanding(
+        playerId: 'd',
+        nickname: 'D',
+        score: 100,
+        bestStreak: 0,
+        biggestWagerWon: 0,
+      ),
+      GameStanding(
+        playerId: 'e',
+        nickname: 'E',
+        score: 80,
+        bestStreak: 0,
+        biggestWagerWon: 0,
+      ),
+    ];
+    final sorted = sortStandings(tied);
+    final ranks = displayRanks(sorted);
+    expect(ranks, [1, 1, 1, 1, 5]);
+    expect(hasUniqueWinner(ranks), isFalse);
+    await tester.pumpWidget(
+      _wrap(
+        BrainPodium(standings: sorted, ranks: ranks, currentPlayerId: null),
+      ),
+    );
+    await tester.pump();
+    // Quatre cartes #1 égales, pas de hero dominant : quatre labels #1.
+    expect(find.text('#1'), findsNWidgets(4));
+    expect(find.text('#5'), findsOneWidget);
+  });
+
+  test('E3) rangs 1,1,3 inchangés + variante 1,1,1,1,5', () {
+    List<GameStanding> rows(intscores) => [
+      for (var i = 0; i < intscores.length; i++)
+        GameStanding(
+          playerId: 'p$i',
+          nickname: 'N$i',
+          score: intscores[i],
+          bestStreak: 0,
+          biggestWagerWon: 0,
+        ),
+    ];
+    expect(displayRanks(sortStandings(rows([100, 100, 80]))), [1, 1, 3]);
+    expect(displayRanks(sortStandings(rows([100, 100, 100, 100, 80]))), [
+      1,
+      1,
+      1,
+      1,
+      5,
+    ]);
+  });
+
+  testWidgets('F3) podium RTL : marqueur joueur affiché', (tester) async {
+    await tester.pumpWidget(
+      const Directionality(
+        textDirection: TextDirection.rtl,
+        child: MaterialApp(
+          home: Scaffold(
+            body: BrainPodium(
+              standings: [
+                GameStanding(
+                  playerId: 'a',
+                  nickname: 'Alice',
+                  score: 100,
+                  bestStreak: 0,
+                  biggestWagerWon: 0,
+                ),
+              ],
+              ranks: [1],
+              currentPlayerId: 'a',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byIcon(Icons.person), findsWidgets);
+    expect(find.text('Alice'), findsOneWidget);
+  });
 }

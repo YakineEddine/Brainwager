@@ -39,6 +39,11 @@ List<GameStanding> sortStandings(Iterable<GameStanding> rows) {
   return list;
 }
 
+/// Vrai SSI un seul joueur détient le rang 1 (vainqueur visuel unique
+/// autorisé). Plusieurs #1 => traitement visuel égal, jamais de faux
+/// vainqueur (le pseudo n'ordonne que l'affichage, pas le jeu).
+bool hasUniqueWinner(List<int> ranks) => ranks.where((r) => r == 1).length == 1;
+
 /// Rangs affichés (competition ranking) : 100,100,80 -> 1,1,3.
 /// Même score => même rang ; jamais de faux ordre entre ex æquo.
 List<int> displayRanks(List<GameStanding> sorted) {

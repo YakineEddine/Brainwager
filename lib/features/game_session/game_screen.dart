@@ -1478,13 +1478,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
               ranks: ranks,
               currentPlayerId: playerId,
             ),
-            if (standings.length > 3) const SizedBox(height: 12),
-            if (standings.length > 3)
-              BrainLeaderboard(
-                standings: standings.sublist(3),
-                ranks: ranks.sublist(3),
-                currentPlayerId: playerId,
-              ),
           ] else if (leaderboardView && standings.isNotEmpty) ...[
             BrainLeaderboard(
               standings: standings,
