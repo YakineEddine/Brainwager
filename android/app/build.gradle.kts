@@ -1,7 +1,26 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Release signing : android/key.properties local (jamais commité, voir
+// android/key.properties.example). Absent en CI/repo => le build release
+// échoue avec une erreur explicite (fail-closed), jamais de clé debug.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+fun hasReleaseSigning(): Boolean {
+    if (!keystorePropertiesFile.exists()) return false
+    return listOf("storePassword", "keyPassword", "keyAlias", "storeFile").all {
+        !keystoreProperties.getProperty(it).isNullOrEmpty()
+    }
 }
 
 android {
@@ -30,12 +49,37 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+            storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
+            storePassword = keystoreProperties.getProperty("storePassword")
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
+    }
+}
+
+// Fail-closed : une tâche release/assemble/bundle sans key.properties
+// (ou incomplet) échoue avec un message clair. Debug/profile non affectés.
+gradle.taskGraph.whenReady {
+    val wantsRelease = allTasks.any { task ->
+        val name = task.name.lowercase()
+        name.contains("release") &&
+            (name.contains("assemble") || name.contains("bundle"))
+    }
+    if (wantsRelease && !hasReleaseSigning()) {
+        throw GradleException(
+            "Release signing not configured: create android/key.properties " +
+                "(storePassword, keyPassword, keyAlias, storeFile) from " +
+                "android/key.properties.example. Never commit the keystore or " +
+                "key.properties. Debug/profile builds are unaffected."
+        )
     }
 }
 
