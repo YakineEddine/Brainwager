@@ -472,6 +472,12 @@ abstract class AppLocalizations {
   /// **'Answer saved'**
   String get answerSaved;
 
+  /// No description provided for @answerEdited.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer edited — resubmit to save'**
+  String get answerEdited;
+
   /// No description provided for @hostStartNext.
   ///
   /// In en, this message translates to:

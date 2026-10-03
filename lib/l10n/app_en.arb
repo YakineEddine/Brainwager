@@ -63,6 +63,7 @@
   "answerHint": "Your answer",
   "submitAnswer": "Submit (answer + wager)",
   "answerSaved": "Answer saved",
+  "answerEdited": "Answer edited — resubmit to save",
   "hostStartNext": "Start / Next question",
   "hostLock": "Lock",
   "hostLockLate": "Lock (after timer)",

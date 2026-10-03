@@ -198,6 +198,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get answerSaved => 'Réponse enregistrée';
 
   @override
+  String get answerEdited => 'Réponse modifiée — revalide pour enregistrer';
+
+  @override
   String get hostStartNext => 'Démarrer / Question suivante';
 
   @override

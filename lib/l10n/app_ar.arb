@@ -67,6 +67,7 @@
   "answerHint": "إجابتك",
   "submitAnswer": "تأكيد (الإجابة + الرهان)",
   "answerSaved": "تم حفظ الإجابة",
+  "answerEdited": "تم تعديل الإجابة — أعد التأكيد للحفظ",
   "hostStartNext": "ابدأ / السؤال التالي",
   "hostLock": "قفل",
   "hostLockLate": "قفل (بعد المؤقت)",

@@ -196,6 +196,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get answerSaved => 'تم حفظ الإجابة';
 
   @override
+  String get answerEdited => 'تم تعديل الإجابة — أعد التأكيد للحفظ';
+
+  @override
   String get hostStartNext => 'ابدأ / السؤال التالي';
 
   @override

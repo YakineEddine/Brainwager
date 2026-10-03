@@ -196,6 +196,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get answerSaved => 'Answer saved';
 
   @override
+  String get answerEdited => 'Answer edited — resubmit to save';
+
+  @override
   String get hostStartNext => 'Start / Next question';
 
   @override

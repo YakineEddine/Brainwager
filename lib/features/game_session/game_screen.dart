@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/theme.dart';
 import '../../core/config/game_config.dart';
 import '../../core/network/heartbeat.dart';
 import '../../core/network/supabase_client.dart';
@@ -19,8 +20,14 @@ import '../../core/utils/game_errors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/brain_buttons.dart';
 import '../../shared/widgets/brain_card.dart';
+import '../../shared/widgets/brain_haptics.dart';
 import '../../shared/widgets/brain_scaffold.dart';
-import '../../shared/widgets/countdown_ring.dart';
+import 'widgets/answer_panel.dart';
+import 'widgets/game_timer.dart';
+import 'widgets/host_controls.dart';
+import 'widgets/question_hero.dart';
+import 'widgets/reveal_panel.dart';
+import 'widgets/wager_selector.dart';
 import '../game_engine/auto_lock.dart';
 import '../game_engine/reveal_policy.dart';
 import '../game_engine/timing.dart';
@@ -510,6 +517,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   String? _sessionError;
   final _answerCtrl = TextEditingController();
   int _wager = 5;
+  bool _editedAfterSave = false;
   GameRealtime? _rt;
   GameHeartbeat? _heartbeat;
   Timer? _ticker;
@@ -667,6 +675,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _answerCtrl.clear();
         setState(() {
           _submission.resetForNewQuestion();
+          _editedAfterSave = false;
           if (pos == _config.finalQuestionIndex &&
               ![0, 10, 20].contains(_wager)) {
             _wager = 0;
@@ -696,6 +705,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       );
       if (!mounted || pos != _lastPosition) return;
       setState(() => _revealed = res as String);
+      BrainHaptics.reveal();
     } catch (_) {
       // Lock entre-temps / réseau : le prochain load réessaiera.
     }
@@ -1073,7 +1083,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
         );
         setState(() {
           _submitInFlight = false;
-          if (mark) _submission.markSubmitted();
+          if (mark) {
+            _submission.markSubmitted();
+            _editedAfterSave = false;
+            BrainHaptics.success();
+          }
         });
       }
     }
@@ -1116,7 +1130,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
         params: {'p_game': widget.gameId},
       );
       await _rt?.broadcastEvent({'type': 'revealed'});
-      if (mounted) setState(() => _revealed = res as String);
+      if (mounted) {
+        setState(() => _revealed = res as String);
+        BrainHaptics.reveal();
+      }
     } catch (e) {
       _snack(e);
     }
@@ -1196,11 +1213,87 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final pos = (q?['position'] as int?) ?? 0;
     final isFinal = pos == _config.finalQuestionIndex;
     final answering = canAnswerIn(_status);
+    final lockedView = _status == 'question_locked';
     final lockDue = _lockDueLocal();
     final wagers = isFinal
         ? _config.finalWagers
         : List.generate(10, (i) => i + 1);
     final duration = (q?['duration_sec'] as int?) ?? _config.defaultDurationSec;
+    final revealed = _revealed;
+    final showHost =
+        _isHost &&
+        (showLockFor(status: _status, isHost: _isHost, lockDue: lockDue) ||
+            showRevealFor(status: _status, isHost: _isHost) ||
+            showBoardFor(status: _status, isHost: _isHost) ||
+            showNextFor(status: _status, isHost: _isHost, position: pos) ||
+            showFinishFor(status: _status, isHost: _isHost));
+    // Colonne réponse/mise : identique en mode answering ; en écho
+    // atténué juste après le verrou ; masquée ensuite (reveal et au-delà :
+    // la soumission n'a plus de sens, le serveur tranche).
+    final answerColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        BrainAnswerPanel(
+          controller: _answerCtrl,
+          enabled: answering,
+          languageCode: _gameLang,
+          hintLabel: l10n.answerHint,
+          submitLabel: l10n.submitAnswer,
+          submitting: _submitInFlight,
+          onSubmit:
+              isSubmitAllowed(
+                status: _status,
+                wagersReady: _wagersReady,
+                submitInFlight: _submitInFlight,
+              )
+              ? _submit
+              : null,
+          onChanged: (_) {
+            // Frappe après sauvegarde : modifiée localement, resoumettable.
+            if (_submission.hasSavedAnswer && mounted) {
+              setState(() {
+                _submission.markEdited();
+                _editedAfterSave = true;
+              });
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        BrainWagerSelector(
+          wagers: wagers,
+          selected: _wager,
+          used: isFinal ? const {} : _prevUsedWagers,
+          enabled: answering && _wagersReady && !_submitInFlight,
+          isFinal: isFinal,
+          onSelect: (w) {
+            // Réponse + mise = une seule soumission : changer de mise
+            // après sauvegarde rend l'état dirty (resoumission requise).
+            final wasSaved = _submission.hasSavedAnswer;
+            setState(() {
+              _wager = w;
+              _submission.markEdited();
+              _editedAfterSave = wasSaved;
+            });
+            BrainHaptics.select();
+          },
+        ),
+        if (answering && !_wagersReady)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(l10n.loadingWagers),
+          ),
+        if (answering)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: BrainSubmissionStatus(
+              saved: _submission.hasSavedAnswer,
+              edited: _editedAfterSave && !_submission.hasSavedAnswer,
+              savedLabel: l10n.answerSaved,
+              editedLabel: l10n.answerEdited,
+            ),
+          ),
+      ],
+    );
     return BrainScaffold(
       appBar: AppBar(
         title: Text(
@@ -1212,113 +1305,78 @@ class _GameScreenState extends ConsumerState<GameScreen>
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          BrainHeroPanel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  q?['prompt'] as String? ?? '',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                  textDirection: contentDirection(_gameLang),
-                  textAlign: _gameLang == 'ar'
-                      ? TextAlign.right
-                      : TextAlign.left,
-                ),
-                const SizedBox(height: 12),
-                CountdownRing(
-                  remainingSec: _remainingSec,
-                  durationSec: duration,
-                ),
-              ],
+          BrainQuestionHero(
+            position: pos,
+            total: _config.totalQuestions,
+            prompt: q?['prompt'] as String? ?? '',
+            languageCode: _gameLang,
+            isFinal: isFinal,
+            finalLabel: isFinal ? l10n.finalWagerTitle : null,
+            timer: BrainTimer(
+              remainingSec: _remainingSec,
+              durationSec: duration,
             ),
           ),
+          // Transition answering -> waiting/reveal : verrou explicite,
+          // timer figé/terminé, zone de saisie atténuée.
+          if (lockedView) ...[
+            const SizedBox(height: 12),
+            BrainHeroPanel(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.lock, color: BrainColors.gold),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      gameStatusLabel(l10n, _status),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 4),
           // Debug Phase 2 : Presence observable (pas une autorité).
           Text(l10n.onlineCount(_presenceCount)),
           const SizedBox(height: 12),
-          TextField(
-            controller: _answerCtrl,
-            enabled: answering,
-            textDirection: contentDirection(_gameLang),
-            onChanged: (_) {
-              // Frappe après sauvegarde : modifiée localement, resoumettable.
-              if (_submission.hasSavedAnswer && mounted) {
-                setState(() => _submission.markEdited());
-              }
-            },
-            decoration: InputDecoration(
-              labelText: l10n.answerHint,
-              border: const OutlineInputBorder(),
+          if (answering)
+            answerColumn
+          else if (lockedView)
+            Opacity(opacity: 0.55, child: answerColumn),
+          if (showHost) ...[
+            const SizedBox(height: 16),
+            BrainHostControls(
+              showLock: showLockFor(
+                status: _status,
+                isHost: _isHost,
+                lockDue: lockDue,
+              ),
+              lockLabel: _isHost ? l10n.hostLock : l10n.hostLockLate,
+              onLock: _lock,
+              showReveal: showRevealFor(status: _status, isHost: _isHost),
+              revealLabel: l10n.revealAnswer,
+              onReveal: _reveal,
+              showBoard: showBoardFor(status: _status, isHost: _isHost),
+              boardLabel: l10n.hostBoard,
+              onBoard: _showLeaderboard,
+              showNext: showNextFor(
+                status: _status,
+                isHost: _isHost,
+                position: pos,
+              ),
+              nextLabel: l10n.hostNext,
+              onNext: _startOrNext,
+              showFinish: showFinishFor(status: _status, isHost: _isHost),
+              finishLabel: l10n.hostFinish,
+              onFinish: _finish,
             ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final w in wagers)
-                ChoiceChip(
-                  label: Text('$w'),
-                  selected: _wager == w,
-                  // Réponse + mise = une seule soumission : changer de mise
-                  // après sauvegarde rend l'état dirty (resoumission requise).
-                  onSelected:
-                      !answering ||
-                          !_wagersReady ||
-                          _submitInFlight ||
-                          (!isFinal && _prevUsedWagers.contains(w))
-                      ? null
-                      : (_) => setState(() {
-                          _wager = w;
-                          _submission.markEdited();
-                        }),
-                ),
-            ],
-          ),
-          if (answering && !_wagersReady)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(l10n.loadingWagers),
-            ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed:
-                isSubmitAllowed(
-                  status: _status,
-                  wagersReady: _wagersReady,
-                  submitInFlight: _submitInFlight,
-                )
-                ? _submit
-                : null,
-            child: Text(l10n.submitAnswer),
-          ),
-          if (_submission.hasSavedAnswer && answering)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(l10n.answerSaved),
-            ),
-          const Divider(height: 32),
-          // Lock piloté par le statut (+ seuil local pour les non-hôtes) ;
-          // le reste est strictement piloté par le statut (serveur requis).
-          if (showLockFor(status: _status, isHost: _isHost, lockDue: lockDue))
-            ElevatedButton(
-              onPressed: _lock,
-              child: Text(_isHost ? l10n.hostLock : l10n.hostLockLate),
-            ),
-          if (showRevealFor(status: _status, isHost: _isHost))
-            ElevatedButton(onPressed: _reveal, child: Text(l10n.revealAnswer)),
-          if (showBoardFor(status: _status, isHost: _isHost))
-            ElevatedButton(
-              onPressed: _showLeaderboard,
-              child: Text(l10n.hostBoard),
-            ),
-          if (showNextFor(status: _status, isHost: _isHost, position: pos))
-            ElevatedButton(onPressed: _startOrNext, child: Text(l10n.hostNext)),
-          if (showFinishFor(status: _status, isHost: _isHost))
-            ElevatedButton(onPressed: _finish, child: Text(l10n.hostFinish)),
-          if (_revealed case final String revealed)
+          ],
+          if (revealed != null)
             Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: RevealedAnswerView(
+              child: BrainRevealPanel(
                 label: l10n.correctAnswer,
                 answer: revealed,
                 languageCode: _gameLang,

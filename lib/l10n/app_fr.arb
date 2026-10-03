@@ -62,6 +62,7 @@
   "answerHint": "Ta réponse",
   "submitAnswer": "Valider (réponse + mise)",
   "answerSaved": "Réponse enregistrée",
+  "answerEdited": "Réponse modifiée — revalide pour enregistrer",
   "hostStartNext": "Démarrer / Question suivante",
   "hostLock": "Verrouiller",
   "hostLockLate": "Verrouiller (après timer)",
