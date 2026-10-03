@@ -33,6 +33,10 @@ import '../game_engine/reveal_policy.dart';
 import '../game_engine/timing.dart';
 import '../game_engine/wager_validator.dart';
 import '../lobby/lobby_viewmodel.dart';
+import 'standings.dart';
+import 'widgets/leaderboard.dart';
+import 'widgets/player_result_panel.dart';
+import 'widgets/podium.dart';
 
 /// Libellé localisé d'un statut serveur (le brut ne s'affiche jamais seul).
 String gameStatusLabel(AppLocalizations l10n, String status) {
@@ -231,6 +235,29 @@ class WagerLoadGuard {
     _pending = null;
     ready = false;
   }
+}
+
+/// Portes de chargement autoritaires (pures, testables) :
+/// - classement : leaderboard/finished uniquement (jamais pendant open) ;
+/// - résultat propre : reveal+ uniquement (jamais open/wager/locked).
+bool mayLoadStandings(String status) =>
+    status == 'leaderboard' || status == 'finished';
+
+bool mayLoadOwnResult(String status) =>
+    status == 'reveal' ||
+    status == 'leaderboard' ||
+    status == 'final_reveal' ||
+    status == 'finished';
+
+/// Décision pure : installer la réponse révélée + haptique une seule fois.
+/// Vrai SSI la réponse change réellement (null/autre -> answer) : les deux
+/// chemins (_reveal hôte, _syncRevealedAnswer realtime) partagent ce test
+/// pour ne jamais vibrer deux fois pour la même révélation.
+bool shouldInstallRevealedAnswer({
+  required String? current,
+  required String answer,
+}) {
+  return current != answer;
 }
 
 /// Verrou manuel : hôte sur question ouverte ; non-hôte seulement une fois
@@ -518,6 +545,19 @@ class _GameScreenState extends ConsumerState<GameScreen>
   final _answerCtrl = TextEditingController();
   int _wager = 5;
   bool _editedAfterSave = false;
+
+  /// Classement autoritaire (players.score, lecture same-game RLS).
+  /// Chargé sur leaderboard/finished uniquement, jamais calculé localement.
+  List<GameStanding> _standings = const [];
+  bool _standingsInFlight = false;
+  String _standingsLoadedFor = '';
+
+  /// Résultat propre (player_answers.is_correct/scored_points, own row).
+  /// Chargé sur reveal+ uniquement, réinitialisé à chaque question.
+  bool? _ownIsCorrect;
+  int? _ownScoredPoints;
+  bool _ownResultInFlight = false;
+  String _ownResultLoadedFor = '';
   GameRealtime? _rt;
   GameHeartbeat? _heartbeat;
   Timer? _ticker;
@@ -640,6 +680,84 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
+  /// Installe une réponse révélée une seule fois (+ haptique unique).
+  /// Les chemins _reveal (hôte) et _syncRevealedAnswer (realtime) convergent
+  /// ici : même réponse réinstallée => aucun doublon haptique/état.
+  void _installRevealedAnswer(String answer) {
+    if (!shouldInstallRevealedAnswer(current: _revealed, answer: answer)) {
+      return;
+    }
+    if (mounted) setState(() => _revealed = answer);
+    BrainHaptics.reveal();
+  }
+
+  /// Classement : lecture seule players same-game (scores serveur).
+  /// Realtime = hint, DB = autorité. Garde anti-doublons (statut+position).
+  Future<void> _maybeLoadStandings() async {
+    if (!mayLoadStandings(_status)) return;
+    if (!mounted) return;
+    final id = '${widget.gameId}|$_status|$_lastPosition';
+    if (_standingsInFlight || _standingsLoadedFor == id) return;
+    _standingsInFlight = true;
+    try {
+      final rows = await supa()
+          .from('players')
+          .select('id,nickname,score,best_streak,biggest_wager_won')
+          .eq('game_id', widget.gameId);
+      if (!mounted || '${widget.gameId}|$_status|$_lastPosition' != id) return;
+      setState(() {
+        _standings = sortStandings(
+          (rows as List).map(
+            (r) => GameStanding.fromRow(Map<String, dynamic>.from(r as Map)),
+          ),
+        );
+        _standingsLoadedFor = id;
+      });
+    } catch (_) {
+      // Réseau/RLS : on garde l'état, le prochain load réessaiera.
+    } finally {
+      _standingsInFlight = false;
+    }
+  }
+
+  /// Résultat propre : own row player_answers (is_correct/scored_points),
+  /// statuts reveal+ uniquement. Jamais pendant open/wager/locked.
+  Future<void> _maybeLoadOwnResult() async {
+    if (!mayLoadOwnResult(_status)) {
+      return;
+    }
+    if (!mounted) return;
+    final playerId = ref.read(lobbyViewModelProvider).value?.playerId;
+    if (playerId == null || playerId.isEmpty) return;
+    final id = '${widget.gameId}|$playerId|$_lastPosition';
+    if (_ownResultInFlight || _ownResultLoadedFor == id) return;
+    _ownResultInFlight = true;
+    try {
+      final row = await supa()
+          .from('player_answers')
+          .select('is_correct,scored_points')
+          .eq('game_id', widget.gameId)
+          .eq('player_id', playerId)
+          .eq('question_idx', _lastPosition)
+          .limit(1)
+          .maybeSingle();
+      if (!mounted) return;
+      final currentId =
+          '${widget.gameId}|${ref.read(lobbyViewModelProvider).value?.playerId}|$_lastPosition';
+      if (currentId != id || row == null) return;
+      final map = Map<String, dynamic>.from(row as Map);
+      setState(() {
+        _ownIsCorrect = map['is_correct'] as bool?;
+        _ownScoredPoints = (map['scored_points'] as num?)?.toInt();
+        _ownResultLoadedFor = id;
+      });
+    } catch (_) {
+      // Réseau/RLS : le prochain load réessaiera.
+    } finally {
+      _ownResultInFlight = false;
+    }
+  }
+
   /// Installe un snapshot autoritaire en un seul setState. N'appelle ni
   /// auto-lock ni sync (pas de récursion : les appelants enchaînent).
   void _installAuthoritativeQuestion(Map<String, dynamic> fresh) {
@@ -676,6 +794,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
         setState(() {
           _submission.resetForNewQuestion();
           _editedAfterSave = false;
+          _ownIsCorrect = null;
+          _ownScoredPoints = null;
+          _ownResultLoadedFor = '';
+          _standingsLoadedFor = '';
           if (pos == _config.finalQuestionIndex &&
               ![0, 10, 20].contains(_wager)) {
             _wager = 0;
@@ -686,6 +808,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
       }
       _maybeAutoLock();
       await _syncRevealedAnswer();
+      // Classement/résultat propre : realtime = hint, DB = autorité.
+      // Verrouillés par statut/identité + garde anti-doublons.
+      unawaited(_maybeLoadStandings());
+      unawaited(_maybeLoadOwnResult());
     } catch (_) {
       // Pas encore démarrée / réseau : on garde l'état, lobby méta suit.
       await _loadLobbyMeta();
@@ -704,8 +830,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         params: {'p_game': widget.gameId},
       );
       if (!mounted || pos != _lastPosition) return;
-      setState(() => _revealed = res as String);
-      BrainHaptics.reveal();
+      _installRevealedAnswer(res as String);
     } catch (_) {
       // Lock entre-temps / réseau : le prochain load réessaiera.
     }
@@ -1130,10 +1255,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         params: {'p_game': widget.gameId},
       );
       await _rt?.broadcastEvent({'type': 'revealed'});
-      if (mounted) {
-        setState(() => _revealed = res as String);
-        BrainHaptics.reveal();
-      }
+      _installRevealedAnswer(res as String);
     } catch (e) {
       _snack(e);
     }
@@ -1214,85 +1336,91 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final isFinal = pos == _config.finalQuestionIndex;
     final answering = canAnswerIn(_status);
     final lockedView = _status == 'question_locked';
+    final leaderboardView = _status == 'leaderboard';
+    final finishedView = _status == 'finished';
     final lockDue = _lockDueLocal();
     final wagers = isFinal
         ? _config.finalWagers
         : List.generate(10, (i) => i + 1);
     final duration = (q?['duration_sec'] as int?) ?? _config.defaultDurationSec;
     final revealed = _revealed;
-    final showHost =
-        _isHost &&
-        (showLockFor(status: _status, isHost: _isHost, lockDue: lockDue) ||
-            showRevealFor(status: _status, isHost: _isHost) ||
-            showBoardFor(status: _status, isHost: _isHost) ||
-            showNextFor(status: _status, isHost: _isHost, position: pos) ||
-            showFinishFor(status: _status, isHost: _isHost));
-    // Colonne réponse/mise : identique en mode answering ; en écho
-    // atténué juste après le verrou ; masquée ensuite (reveal et au-delà :
-    // la soumission n'a plus de sens, le serveur tranche).
-    final answerColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        BrainAnswerPanel(
-          controller: _answerCtrl,
-          enabled: answering,
-          languageCode: _gameLang,
-          hintLabel: l10n.answerHint,
-          submitLabel: l10n.submitAnswer,
-          submitting: _submitInFlight,
-          onSubmit:
-              isSubmitAllowed(
-                status: _status,
-                wagersReady: _wagersReady,
-                submitInFlight: _submitInFlight,
-              )
-              ? _submit
-              : null,
-          onChanged: (_) {
-            // Frappe après sauvegarde : modifiée localement, resoumettable.
-            if (_submission.hasSavedAnswer && mounted) {
+    // Panneau d'actions : OR des prédicats existants, SANS global _isHost.
+    // showLockFor autorise le non-hôte après timeout (lock tardif) : ce
+    // bouton doit rester rendu. Les autres prédicats restent hôte-only.
+    final showControls =
+        showLockFor(status: _status, isHost: _isHost, lockDue: lockDue) ||
+        showRevealFor(status: _status, isHost: _isHost) ||
+        showBoardFor(status: _status, isHost: _isHost) ||
+        showNextFor(status: _status, isHost: _isHost, position: pos) ||
+        showFinishFor(status: _status, isHost: _isHost);
+    final playerId = ref.read(lobbyViewModelProvider).value?.playerId;
+    final standings = _standings;
+    final ranks = displayRanks(sortStandings(standings));
+    // Colonne réponse/mise/submit : une seule surface d'action
+    // (réponse -> mise -> CTA -> feedback). En écho atténué juste après
+    // le verrou ; masquée ensuite (reveal et au-delà : la soumission n'a
+    // plus de sens, le serveur tranche).
+    final answerColumn = BrainAnswerPanel(
+      controller: _answerCtrl,
+      enabled: answering,
+      languageCode: _gameLang,
+      hintLabel: l10n.answerHint,
+      submitLabel: l10n.submitAnswer,
+      submitting: _submitInFlight,
+      onSubmit:
+          isSubmitAllowed(
+            status: _status,
+            wagersReady: _wagersReady,
+            submitInFlight: _submitInFlight,
+          )
+          ? _submit
+          : null,
+      onChanged: (_) {
+        // Frappe après sauvegarde : modifiée localement, resoumettable.
+        if (_submission.hasSavedAnswer && mounted) {
+          setState(() {
+            _submission.markEdited();
+            _editedAfterSave = true;
+          });
+        }
+      },
+      wagerContent: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          BrainWagerSelector(
+            wagers: wagers,
+            selected: _wager,
+            used: isFinal ? const {} : _prevUsedWagers,
+            enabled: answering && _wagersReady && !_submitInFlight,
+            isFinal: isFinal,
+            semanticLabelFor: (w) => l10n.wagerAmount(w),
+            onSelect: (w) {
+              // Réponse + mise = une seule soumission : changer de mise
+              // après sauvegarde rend l'état dirty (resoumission requise).
+              final wasSaved = _submission.hasSavedAnswer;
               setState(() {
+                _wager = w;
                 _submission.markEdited();
-                _editedAfterSave = true;
+                _editedAfterSave = wasSaved;
               });
-            }
-          },
-        ),
-        const SizedBox(height: 12),
-        BrainWagerSelector(
-          wagers: wagers,
-          selected: _wager,
-          used: isFinal ? const {} : _prevUsedWagers,
-          enabled: answering && _wagersReady && !_submitInFlight,
-          isFinal: isFinal,
-          onSelect: (w) {
-            // Réponse + mise = une seule soumission : changer de mise
-            // après sauvegarde rend l'état dirty (resoumission requise).
-            final wasSaved = _submission.hasSavedAnswer;
-            setState(() {
-              _wager = w;
-              _submission.markEdited();
-              _editedAfterSave = wasSaved;
-            });
-            BrainHaptics.select();
-          },
-        ),
-        if (answering && !_wagersReady)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(l10n.loadingWagers),
+              BrainHaptics.select();
+            },
           ),
-        if (answering)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: BrainSubmissionStatus(
+          if (answering && !_wagersReady)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(l10n.loadingWagers),
+            ),
+        ],
+      ),
+      statusContent: answering
+          ? BrainSubmissionStatus(
               saved: _submission.hasSavedAnswer,
               edited: _editedAfterSave && !_submission.hasSavedAnswer,
               savedLabel: l10n.answerSaved,
               editedLabel: l10n.answerEdited,
-            ),
-          ),
-      ],
+            )
+          : null,
     );
     return BrainScaffold(
       appBar: AppBar(
@@ -1312,9 +1440,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
             languageCode: _gameLang,
             isFinal: isFinal,
             finalLabel: isFinal ? l10n.finalWagerTitle : null,
+            imageUrl: q?['image_url'] as String?,
             timer: BrainTimer(
-              remainingSec: _remainingSec,
+              remainingSec: answering ? _remainingSec : 0,
               durationSec: duration,
+              active: answering,
             ),
           ),
           // Transition answering -> waiting/reveal : verrou explicite,
@@ -1337,15 +1467,32 @@ class _GameScreenState extends ConsumerState<GameScreen>
               ),
             ),
           ],
-          const SizedBox(height: 4),
-          // Debug Phase 2 : Presence observable (pas une autorité).
-          Text(l10n.onlineCount(_presenceCount)),
           const SizedBox(height: 12),
           if (answering)
             answerColumn
           else if (lockedView)
             Opacity(opacity: 0.55, child: answerColumn),
-          if (showHost) ...[
+          if (finishedView) ...[
+            BrainPodium(
+              standings: standings,
+              ranks: ranks,
+              currentPlayerId: playerId,
+            ),
+            if (standings.length > 3) const SizedBox(height: 12),
+            if (standings.length > 3)
+              BrainLeaderboard(
+                standings: standings.sublist(3),
+                ranks: ranks.sublist(3),
+                currentPlayerId: playerId,
+              ),
+          ] else if (leaderboardView && standings.isNotEmpty) ...[
+            BrainLeaderboard(
+              standings: standings,
+              ranks: ranks,
+              currentPlayerId: playerId,
+            ),
+          ],
+          if (showControls) ...[
             const SizedBox(height: 16),
             BrainHostControls(
               showLock: showLockFor(
@@ -1373,7 +1520,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
               onFinish: _finish,
             ),
           ],
-          if (revealed != null)
+          if (revealed != null) ...[
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: BrainRevealPanel(
@@ -1382,6 +1529,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 languageCode: _gameLang,
               ),
             ),
+            if (_ownIsCorrect != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: BrainPlayerResultPanel(
+                  isCorrect: _ownIsCorrect!,
+                  scoredPoints: _ownScoredPoints ?? 0,
+                  correctLabel: l10n.playerCorrect,
+                  incorrectLabel: l10n.playerIncorrect,
+                ),
+              ),
+          ],
         ],
       ),
     );

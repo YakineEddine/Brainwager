@@ -199,6 +199,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get answerEdited => 'Answer edited — resubmit to save';
 
   @override
+  String wagerAmount(Object amount) {
+    return 'Wager $amount';
+  }
+
+  @override
+  String get playerCorrect => 'Correct';
+
+  @override
+  String get playerIncorrect => 'Incorrect';
+
+  @override
   String get hostStartNext => 'Start / Next question';
 
   @override

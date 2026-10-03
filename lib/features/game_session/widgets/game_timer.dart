@@ -27,13 +27,17 @@ Color timerPhaseColor(TimerPhase phase) {
 
 /// Anneau timer premium : taille généreuse, couleur de phase, pulsation
 /// lente et douce en critique (scale, jamais de flash).
+/// [active] = false après la fin de la question : affichage figé/terminé
+/// (aucune pulsation), purement visuel — le temps autoritatif ne change pas.
 class BrainTimer extends StatelessWidget {
   final int remainingSec;
   final int durationSec;
+  final bool active;
   const BrainTimer({
     super.key,
     required this.remainingSec,
     required this.durationSec,
+    this.active = true,
   });
 
   @override
@@ -42,8 +46,8 @@ class BrainTimer extends StatelessWidget {
     final progress = durationSec <= 0
         ? 0.0
         : (remaining / durationSec).clamp(0.0, 1.0);
-    final phase = timerPhaseFor(remaining);
-    final color = timerPhaseColor(phase);
+    final phase = active ? timerPhaseFor(remaining) : TimerPhase.critical;
+    final color = active ? timerPhaseColor(phase) : BrainColors.textSecondary;
     final ring = SizedBox(
       width: 96,
       height: 96,
@@ -54,12 +58,12 @@ class BrainTimer extends StatelessWidget {
             value: progress,
             color: color,
             backgroundColor: BrainColors.surfaceHigh,
-            strokeWidth: phase == TimerPhase.normal ? 7 : 9,
+            strokeWidth: phase == TimerPhase.normal && active ? 7 : 9,
           ),
           Text(
             '$remaining s',
             style: TextStyle(
-              fontSize: phase == TimerPhase.critical ? 22 : 19,
+              fontSize: phase == TimerPhase.critical && active ? 22 : 19,
               fontWeight: FontWeight.w800,
               color: BrainColors.textPrimary,
             ),
@@ -67,7 +71,7 @@ class BrainTimer extends StatelessWidget {
         ],
       ),
     );
-    if (phase != TimerPhase.critical) return ring;
+    if (!active || phase != TimerPhase.critical) return ring;
     return _CriticalPulse(color: color, child: ring);
   }
 }
@@ -104,6 +108,7 @@ class _CriticalPulseState extends State<_CriticalPulse>
   @override
   Widget build(BuildContext context) {
     return ScaleTransition(
+      key: const Key('brain-timer-pulse'),
       scale: Tween(
         begin: 1.0,
         end: 1.05,

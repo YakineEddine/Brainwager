@@ -15,6 +15,11 @@ class BrainQuestionHero extends StatelessWidget {
   final bool isFinal;
   final String? finalLabel;
   final Widget timer;
+
+  /// URL d'image officielle (image_url du RPC) : optionnelle, défensive.
+  /// Absente/illisible => masquée sans casser la mise en page.
+  /// (UGC : toujours null, images interdites côté serveur.)
+  final String? imageUrl;
   const BrainQuestionHero({
     super.key,
     required this.position,
@@ -24,12 +29,14 @@ class BrainQuestionHero extends StatelessWidget {
     required this.isFinal,
     this.finalLabel,
     required this.timer,
+    this.imageUrl,
   });
 
   @override
   Widget build(BuildContext context) {
     final rtl = languageCode == 'ar';
     final label = finalLabel;
+    final image = imageUrl;
     return BrainHeroPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -73,6 +80,17 @@ class BrainQuestionHero extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: BrainColors.gold,
                 fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          if (image != null && image.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                image,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
             ),
           ],

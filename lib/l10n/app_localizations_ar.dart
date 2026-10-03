@@ -199,6 +199,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get answerEdited => 'تم تعديل الإجابة — أعد التأكيد للحفظ';
 
   @override
+  String wagerAmount(Object amount) {
+    return 'الرهان $amount';
+  }
+
+  @override
+  String get playerCorrect => 'إجابة صحيحة';
+
+  @override
+  String get playerIncorrect => 'إجابة خاطئة';
+
+  @override
   String get hostStartNext => 'ابدأ / السؤال التالي';
 
   @override

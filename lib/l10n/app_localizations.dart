@@ -478,6 +478,24 @@ abstract class AppLocalizations {
   /// **'Answer edited — resubmit to save'**
   String get answerEdited;
 
+  /// No description provided for @wagerAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Wager {amount}'**
+  String wagerAmount(Object amount);
+
+  /// No description provided for @playerCorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct'**
+  String get playerCorrect;
+
+  /// No description provided for @playerIncorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect'**
+  String get playerIncorrect;
+
   /// No description provided for @hostStartNext.
   ///
   /// In en, this message translates to:

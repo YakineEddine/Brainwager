@@ -21,10 +21,10 @@ aucune donnée d'autorité modifiée. Tous les prédicats (`showLockFor`,
 
 Compteur `position + 1 / 11` (toujours LTR, pas de flip bidi en arabe),
 prompt dominant (`headlineSmall`), direction du CONTENU de partie
-(RTL arabe), timer intégré. Finale : cadre or + rappel
-`finalWagerTitle` existant. Catégorie/difficulté absentes du RPC
-(`get_current_question` ne les renvoie pas) : non affichées, sans
-changement backend. `image_url` renvoyé mais non affiché (ticket futur).
+(RTL arabe), timer intégré (`active` : tick pendant answering, figé
+ensuite). Finale : cadre or + rappel `finalWagerTitle` existant.
+`image_url` (RPC) affiché si présent, masqué sinon. Catégorie/difficulté
+absentes du RPC : non affichées, sans changement backend.
 
 ## 3. Timer (`BrainTimer`, `timerPhaseFor`)
 
@@ -69,14 +69,31 @@ Carte d'actions : Lock/Reveal primaires, Board/Next secondaires,
 Finish corail distinct (destructif/final ≠ progression). Visibilité
 100 % prédicats existants. Haptics `lightImpact` au submit réussi.
 
-## 9. Leaderboard / podium / résultat joueur : NON FAITS (données absentes)
+## 9. Leaderboard / podium / résultat joueur : DONNÉES CONFIRMÉES
 
-Le client ne reçoit ni lignes de classement ni scores ni résultat
-individuel par question (seuls `memberCount`/`presenceCount` existent).
-Donc : aucun classement, aucun podium, aucun "correct/incorrect"
-joueur — l'afficher exigerait SQL/RPC, hors scope et interdit ici.
-Les statuts `leaderboard`/`finished` gardent l'état existant (question +
-contrôles hôte Next/Finish). Ticket backend/UI ultérieur requis.
+Vérifié contre le schéma/RLS déployé (aucun changement backend requis) :
+
+- `players` : `players_select_same_game` permet aux membres de lire
+  `id, nickname, score, best_streak, biggest_wager_won` de leur partie.
+  `GameStanding` + `sortStandings` (score desc, pseudo display-only) +
+  `displayRanks` (1,1,3, jamais de faux ordre) alimentent
+  `BrainLeaderboard` (statut `leaderboard` + highlight joueur courant
+  via `GameSession.playerId`) et `BrainPodium` (statut `finished`,
+  top 3 + suite, ex æquo honnêtes).
+- `player_answers` : own row lisible (`answers_select_locked`) avec
+  `is_correct`/`scored_points`. Chargée uniquement sur
+  `reveal`/`leaderboard`/`final_reveal`/`finished`
+  (`mayLoadOwnResult`), jamais pendant open/wager/locked ; réinitialisée
+  à chaque question. `BrainPlayerResultPanel` affiche Correct/Incorrect
+  (clés `playerCorrect`/`playerIncorrect`) + delta (`+7`/`0`/`-20`),
+  turquoise/corail. Aucun matcher local, aucun calcul local.
+- `image_url` : BIEN renvoyé par `get_current_question` (officiels
+  uniquement ; UGC : toujours null, images interdites serveur).
+  `BrainQuestionHero` l'affiche si non vide, masqué proprement
+  (`errorBuilder`) sinon. Correction du §2 précédent qui le disait absent.
+
+Restent indisponibles (aucune donnée RPC) : `category`, `difficulty`.
+Aucune donnée inventée nulle part.
 
 ## 10. Animations / haptics / a11y
 
@@ -87,6 +104,5 @@ scroll clavier conservé, RTL vérifié par tests.
 
 ## 11. Reste (UI-3+)
 
-Classement/podium (bloqué données), image de question, célébration
-reveal enrichie, animations lobby, migration visuelle éditeur UGC et
-écrans secondaires.
+Célébration reveal enrichie, animations lobby, migration visuelle éditeur
+UGC et écrans secondaires, image de question enrichie (zoom/placeholder).

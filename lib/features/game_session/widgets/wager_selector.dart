@@ -14,6 +14,9 @@ class BrainWagerSelector extends StatelessWidget {
   final bool enabled;
   final bool isFinal;
   final ValueChanged<int>? onSelect;
+
+  /// Libellé d'accessibilité localisé par montant (jamais codé en dur).
+  final String Function(int amount) semanticLabelFor;
   const BrainWagerSelector({
     super.key,
     required this.wagers,
@@ -22,6 +25,7 @@ class BrainWagerSelector extends StatelessWidget {
     required this.enabled,
     required this.isFinal,
     required this.onSelect,
+    required this.semanticLabelFor,
   });
 
   @override
@@ -34,6 +38,7 @@ class BrainWagerSelector extends StatelessWidget {
         for (final w in wagers)
           BrainWagerToken(
             value: w,
+            semanticLabel: semanticLabelFor(w),
             selected: selected == w,
             used: used.contains(w),
             enabled: enabled,
@@ -50,6 +55,7 @@ class BrainWagerSelector extends StatelessWidget {
 /// Jeton de mise : pièce de jeu ronde, état lisible d'un coup d'œil.
 class BrainWagerToken extends StatelessWidget {
   final int value;
+  final String semanticLabel;
   final bool selected;
   final bool used;
   final bool enabled;
@@ -58,6 +64,7 @@ class BrainWagerToken extends StatelessWidget {
   const BrainWagerToken({
     super.key,
     required this.value,
+    required this.semanticLabel,
     required this.selected,
     required this.used,
     required this.enabled,
@@ -128,7 +135,7 @@ class BrainWagerToken extends StatelessWidget {
       ),
     );
     return Semantics(
-      label: 'wager $value',
+      label: semanticLabel,
       selected: selected,
       enabled: interactive,
       button: true,

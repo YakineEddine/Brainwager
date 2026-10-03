@@ -18,6 +18,13 @@ class BrainAnswerPanel extends StatelessWidget {
   final bool submitting;
   final VoidCallback? onSubmit;
   final ValueChanged<String> onChanged;
+
+  /// Slot mises : rendu entre le champ et le CTA (une soumission =
+  /// réponse + mise, l'utilisateur décide des deux avant de valider).
+  final Widget? wagerContent;
+
+  /// Slot feedback : rendu sous le CTA (sauvé / modifié).
+  final Widget? statusContent;
   const BrainAnswerPanel({
     super.key,
     required this.controller,
@@ -28,10 +35,14 @@ class BrainAnswerPanel extends StatelessWidget {
     required this.submitting,
     required this.onSubmit,
     required this.onChanged,
+    this.wagerContent,
+    this.statusContent,
   });
 
   @override
   Widget build(BuildContext context) {
+    final wager = wagerContent;
+    final status = statusContent;
     return BrainCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -46,6 +57,10 @@ class BrainAnswerPanel extends StatelessWidget {
             onChanged: onChanged,
             decoration: InputDecoration(labelText: hintLabel),
           ),
+          if (wager != null) ...[
+            const SizedBox(height: BrainSpacing.md),
+            wager,
+          ],
           const SizedBox(height: BrainSpacing.md),
           BrainPrimaryButton(
             onPressed: submitting ? null : onSubmit,
@@ -65,6 +80,10 @@ class BrainAnswerPanel extends StatelessWidget {
                   )
                 : Text(submitLabel),
           ),
+          if (status != null) ...[
+            const SizedBox(height: BrainSpacing.sm),
+            status,
+          ],
         ],
       ),
     );

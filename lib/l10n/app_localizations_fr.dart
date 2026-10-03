@@ -201,6 +201,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get answerEdited => 'Réponse modifiée — revalide pour enregistrer';
 
   @override
+  String wagerAmount(Object amount) {
+    return 'Mise $amount';
+  }
+
+  @override
+  String get playerCorrect => 'Bonne réponse';
+
+  @override
+  String get playerIncorrect => 'Mauvaise réponse';
+
+  @override
   String get hostStartNext => 'Démarrer / Question suivante';
 
   @override
