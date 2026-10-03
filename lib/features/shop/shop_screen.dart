@@ -6,6 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/badges.dart';
+import '../../shared/widgets/brain_card.dart';
+import '../../shared/widgets/brain_scaffold.dart';
+import '../../shared/widgets/state_views.dart';
 import '../packs/pack.dart';
 import '../packs/pack_providers.dart';
 import 'billing_controller.dart';
@@ -48,29 +52,21 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     final billing = ref.watch(billingControllerProvider);
     final controller = ref.read(billingControllerProvider.notifier);
 
-    return Scaffold(
+    return BrainScaffold(
       appBar: AppBar(title: Text(l10n.shop)),
       body: catalog.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(l10n.packLoadError),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(packCatalogProvider),
-                child: Text(l10n.packRetry),
-              ),
-            ],
-          ),
+        loading: () => const BrainLoading(),
+        error: (_, _) => BrainError(
+          message: l10n.packLoadError,
+          onRetry: () => ref.invalidate(packCatalogProvider),
+          retryLabel: l10n.packRetry,
         ),
         data: (c) {
           final ids = billingProductIds(c.packs);
           // Best-effort sync/readiness avant tout achat.
           if (!billing.initialized) {
             _ensureBilling(ids);
-            return const Center(child: CircularProgressIndicator());
+            return const BrainLoading();
           }
           if (_lastInitIds == null ||
               _lastInitIds!.length != ids.length ||
@@ -197,37 +193,58 @@ class _ShopBody extends ConsumerWidget {
       );
     }
 
+    Widget productRow({
+      required String title,
+      required String sku,
+      VoidCallback? onTap,
+    }) {
+      final owned = activeEntitlements.contains(sku);
+      final price = billing.productsById[sku]?.price;
+      final textTheme = Theme.of(context).textTheme;
+      return BrainCard(
+        onTap: onTap,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  if (owned)
+                    BrainBadge(
+                      label: l10n.shopOwned,
+                      kind: BrainBadgeKind.owned,
+                    )
+                  else
+                    Text(
+                      price ?? l10n.shopNoProducts,
+                      style: textTheme.bodyMedium,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            buyButton(sku),
+          ],
+        ),
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         statusBanner(),
         feedbackRow(),
-        for (final p in premiumPacks)
-          Card(
-            child: ListTile(
-              title: Text(p.localizedTitle(lang)),
-              subtitle: Text(
-                activeEntitlements.contains(p.priceSku)
-                    ? l10n.shopOwned
-                    : (billing.productsById[p.priceSku]?.price ??
-                          l10n.shopNoProducts),
-              ),
-              trailing: buyButton(p.priceSku!),
-              onTap: () => context.push('/packs/${p.id}'),
-            ),
+        for (final p in premiumPacks) ...[
+          productRow(
+            title: p.localizedTitle(lang),
+            sku: p.priceSku!,
+            onTap: () => context.push('/packs/${p.id}'),
           ),
-        Card(
-          child: ListTile(
-            title: Text(l10n.shopRemoveAds),
-            subtitle: Text(
-              activeEntitlements.contains(removeAdsSku)
-                  ? l10n.shopOwned
-                  : (billing.productsById[removeAdsSku]?.price ??
-                        l10n.shopNoProducts),
-            ),
-            trailing: buyButton(removeAdsSku),
-          ),
-        ),
+          const SizedBox(height: 12),
+        ],
+        productRow(title: l10n.shopRemoveAds, sku: removeAdsSku),
         const SizedBox(height: 16),
         Row(
           children: [

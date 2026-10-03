@@ -3,8 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/theme.dart';
 import '../../core/utils/game_errors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/brain_buttons.dart';
+import '../../shared/widgets/brain_card.dart';
+import '../../shared/widgets/brain_scaffold.dart';
+import '../../shared/widgets/section_header.dart';
 import '../packs/pack_providers.dart';
 import '../packs/pack_repository.dart';
 import '../packs/pack_selection.dart';
@@ -17,35 +22,55 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
+    final textTheme = Theme.of(context).textTheme;
+    return BrainScaffold(
       appBar: AppBar(title: Text(l10n.appTitle)),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l10n.tagline),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => context.go('/create'),
-              child: Text(l10n.createGame),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Hero : wordmark temporaire + tagline (pas de logo final ici).
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.appTitle.toUpperCase(),
+                  style: textTheme.displaySmall,
+                ),
+                const SizedBox(height: 4),
+                Text(l10n.tagline, style: textTheme.bodyLarge),
+              ],
             ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => context.go('/join'),
-              child: Text(l10n.joinGame),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => context.go('/packs'),
-              child: Text(l10n.packs),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => context.go('/shop'),
-              child: Text(l10n.shop),
-            ),
-          ],
-        ),
+          ),
+          BrainMenuCard(
+            onTap: () => context.go('/create'),
+            icon: Icons.sports_esports,
+            iconColor: BrainColors.electricViolet,
+            title: l10n.createGame,
+          ),
+          const SizedBox(height: 12),
+          BrainMenuCard(
+            onTap: () => context.go('/join'),
+            icon: Icons.group_add,
+            iconColor: BrainColors.turquoise,
+            title: l10n.joinGame,
+          ),
+          const SizedBox(height: 12),
+          BrainMenuCard(
+            onTap: () => context.go('/packs'),
+            icon: Icons.style,
+            iconColor: BrainColors.gold,
+            title: l10n.packs,
+          ),
+          const SizedBox(height: 12),
+          BrainMenuCard(
+            onTap: () => context.go('/shop'),
+            icon: Icons.shopping_bag,
+            iconColor: BrainColors.coral,
+            title: l10n.shop,
+          ),
+        ],
       ),
     );
   }
@@ -117,39 +142,53 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
     // le catalogue normal ne doit même pas être déclenché (ni chargé ni
     // affiché) : seule la branche partagée (RPC dédié) tourne.
     final shared = widget.sharedCode != null && widget.sharedCode!.isNotEmpty;
-    return Scaffold(
+    return BrainScaffold(
       appBar: AppBar(title: Text(l10n.createGame)),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _pseudo,
-              decoration: InputDecoration(labelText: l10n.nickname),
-            ),
-            const SizedBox(height: 12),
-            // Langue du CONTENU de partie (indépendante de la langue UI) :
-            // une UI FR peut créer une partie AR.
-            Text(l10n.gameLanguage),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'fr', label: Text('Français')),
-                ButtonSegment(value: 'en', label: Text('English')),
-                ButtonSegment(value: 'ar', label: Text('العربية')),
+        children: [
+          BrainCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SectionHeader(title: l10n.nickname),
+                TextField(
+                  controller: _pseudo,
+                  decoration: InputDecoration(labelText: l10n.nickname),
+                ),
               ],
-              selected: {gameLanguage},
-              onSelectionChanged: (s) => setState(() => _gameLang = s.first),
             ),
-            const SizedBox(height: 12),
-            // Mode partagé : SEULE la branche partagée (jamais le dropdown
-            // catalogue, jamais le provider catalogue). Mode normal :
-            // branche catalogue isolée (seule à observer le provider).
-            if (shared)
-              _sharedBranch(gameLanguage)
-            else
-              _CatalogCreateBranch(pseudo: _pseudo, gameLanguage: gameLanguage),
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          // Langue du CONTENU de partie (indépendante de la langue UI) :
+          // une UI FR peut créer une partie AR.
+          BrainCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SectionHeader(title: l10n.gameLanguage),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'fr', label: Text('Français')),
+                    ButtonSegment(value: 'en', label: Text('English')),
+                    ButtonSegment(value: 'ar', label: Text('العربية')),
+                  ],
+                  selected: {gameLanguage},
+                  onSelectionChanged: (s) =>
+                      setState(() => _gameLang = s.first),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Mode partagé : SEULE la branche partagée (jamais le dropdown
+          // catalogue, jamais le provider catalogue). Mode normal :
+          // branche catalogue isolée (seule à observer le provider).
+          if (shared)
+            _sharedBranch(gameLanguage)
+          else
+            _CatalogCreateBranch(pseudo: _pseudo, gameLanguage: gameLanguage),
+        ],
       ),
     );
   }
@@ -242,7 +281,7 @@ class _CreateGameButton extends ConsumerWidget {
     final loading = ref.watch(lobbyViewModelProvider).isLoading;
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    return ElevatedButton(
+    return BrainPrimaryButton(
       onPressed: loading || busy || packId == null
           ? null
           : () async {
@@ -390,43 +429,50 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
     final lobby = ref.watch(lobbyViewModelProvider);
     final l10n = AppLocalizations.of(context)!;
     final lang = Localizations.localeOf(context).languageCode;
-    return Scaffold(
+    return BrainScaffold(
       appBar: AppBar(title: Text(l10n.joinGame)),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _code,
-              textDirection: TextDirection.ltr,
-              decoration: InputDecoration(labelText: l10n.joinCodeHint),
+        children: [
+          BrainCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SectionHeader(title: l10n.joinCode),
+                TextField(
+                  controller: _code,
+                  textDirection: TextDirection.ltr,
+                  decoration: InputDecoration(labelText: l10n.joinCodeHint),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _pseudo,
+                  decoration: InputDecoration(labelText: l10n.nickname),
+                ),
+              ],
             ),
-            TextField(
-              controller: _pseudo,
-              decoration: InputDecoration(labelText: l10n.nickname),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: lobby.isLoading
-                  ? null
-                  : () async {
-                      try {
-                        final s = await ref
-                            .read(lobbyViewModelProvider.notifier)
-                            .joinGame(code: _code.text, nickname: _pseudo.text);
-                        if (context.mounted) context.go('/game/${s.gameId}');
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(friendlyGameError(e, lang))),
-                          );
-                        }
+          ),
+          const SizedBox(height: 16),
+          BrainPrimaryButton(
+            onPressed: lobby.isLoading
+                ? null
+                : () async {
+                    try {
+                      final s = await ref
+                          .read(lobbyViewModelProvider.notifier)
+                          .joinGame(code: _code.text, nickname: _pseudo.text);
+                      if (context.mounted) context.go('/game/${s.gameId}');
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(friendlyGameError(e, lang))),
+                        );
                       }
-                    },
-              child: Text(l10n.joinGame),
-            ),
-          ],
-        ),
+                    }
+                  },
+            child: Text(l10n.joinGame),
+          ),
+        ],
       ),
     );
   }

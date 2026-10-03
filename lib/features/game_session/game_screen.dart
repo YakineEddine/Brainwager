@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/config/game_config.dart';
 import '../../core/network/heartbeat.dart';
 import '../../core/network/supabase_client.dart';
@@ -16,6 +17,9 @@ import '../../core/utils/clock.dart';
 import '../../core/utils/content_direction.dart';
 import '../../core/utils/game_errors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/brain_buttons.dart';
+import '../../shared/widgets/brain_card.dart';
+import '../../shared/widgets/brain_scaffold.dart';
 import '../../shared/widgets/countdown_ring.dart';
 import '../game_engine/auto_lock.dart';
 import '../game_engine/reveal_policy.dart';
@@ -65,8 +69,9 @@ class RevealedAnswerView extends StatelessWidget {
   Widget build(BuildContext context) {
     final rtl = contentDirection(languageCode) == TextDirection.rtl;
     return Column(
-      crossAxisAlignment:
-          rtl ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: rtl
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(label, style: Theme.of(context).textTheme.titleMedium),
@@ -102,8 +107,7 @@ bool showNextFor({
   required String status,
   required bool isHost,
   required int position,
-}) =>
-    isHost && status == 'leaderboard' && position < 10;
+}) => isHost && status == 'leaderboard' && position < 10;
 
 /// Terminer : hôte seul, en final_reveal.
 bool showFinishFor({required String status, required bool isHost}) =>
@@ -203,8 +207,7 @@ class WagerLoadGuard {
     required String playerId,
     required int position,
     required String? openedAt,
-  }) =>
-      '$gameId|$playerId|$position|${openedAt ?? ''}';
+  }) => '$gameId|$playerId|$position|${openedAt ?? ''}';
 
   void beginLoad(String id) {
     ready = false;
@@ -276,8 +279,7 @@ class AnswerLoadGuard {
     required String playerId,
     required int position,
     required String? openedAt,
-  }) =>
-      '$gameId|$playerId|$position|${openedAt ?? ''}';
+  }) => '$gameId|$playerId|$position|${openedAt ?? ''}';
 
   void beginLoad(String id) {
     _pending = id;
@@ -392,31 +394,81 @@ class LobbyWaitingView extends StatelessWidget {
   Widget build(BuildContext context) {
     final code = joinCode;
     final l10n = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.all(16),
         children: [
-          Text(l10n.waitingForHost),
-          const SizedBox(height: 8),
-          Text(l10n.joinCode),
           Text(
-            code == null || code.isEmpty ? '…' : code,
-            style: Theme.of(context).textTheme.headlineMedium,
-            textDirection: TextDirection.ltr,
+            l10n.waitingForHost,
+            style: textTheme.titleLarge,
+            textAlign: TextAlign.center,
           ),
-          if (code != null && code.isNotEmpty)
-            TextButton(
-              onPressed: () => onCopyCode(code),
-              child: Text(l10n.copyCode),
+          const SizedBox(height: 16),
+          BrainHeroPanel(
+            child: Column(
+              children: [
+                Text(l10n.joinCode, style: textTheme.bodyMedium),
+                const SizedBox(height: 4),
+                Text(
+                  code == null || code.isEmpty ? '…' : code,
+                  style: textTheme.displaySmall,
+                  textDirection: TextDirection.ltr,
+                ),
+                if (code != null && code.isNotEmpty)
+                  BrainGhostButton(
+                    onPressed: () => onCopyCode(code),
+                    child: Text(l10n.copyCode),
+                  ),
+              ],
             ),
-          const SizedBox(height: 8),
-          Text(l10n.playersCount(memberCount, maxMembers)),
-          Text(l10n.onlineCount(presenceCount)),
+          ),
+          const SizedBox(height: 12),
+          BrainCard(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$memberCount / $maxMembers',
+                      style: textTheme.titleLarge,
+                    ),
+                    Text(
+                      l10n.playersCount(memberCount, maxMembers),
+                      style: textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('$presenceCount', style: textTheme.titleLarge),
+                    Text(
+                      l10n.onlineCount(presenceCount),
+                      style: textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
           if (isHost) ...[
             const SizedBox(height: 16),
             if (!startEnabled)
-              Text(l10n.minPlayersHint(memberCount, maxMembers, minPlayers)),
-            ElevatedButton(
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  l10n.minPlayersHint(memberCount, maxMembers, minPlayers),
+                  style: textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            BrainPrimaryButton(
               onPressed: startEnabled ? onStart : null,
               child: Text(l10n.gameStart),
             ),
@@ -599,8 +651,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   Future<void> _loadQuestion() async {
     try {
-      final res = await supa()
-          .rpc('get_current_question', params: {'p_game': widget.gameId});
+      final res = await supa().rpc(
+        'get_current_question',
+        params: {'p_game': widget.gameId},
+      );
       if (!mounted) return;
       final fresh = Map<String, dynamic>.from(res as Map);
       final pos = (fresh['position'] as int?) ?? 0;
@@ -636,8 +690,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
     if (!maySyncReadRevealed(_status)) return;
     final pos = _lastPosition;
     try {
-      final res =
-          await supa().rpc('reveal_answer', params: {'p_game': widget.gameId});
+      final res = await supa().rpc(
+        'reveal_answer',
+        params: {'p_game': widget.gameId},
+      );
       if (!mounted || pos != _lastPosition) return;
       setState(() => _revealed = res as String);
     } catch (_) {
@@ -747,8 +803,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         current: _wager,
         rows: parsed,
       );
-      final nowPid =
-          ref.read(lobbyViewModelProvider).value?.playerId ?? '';
+      final nowPid = ref.read(lobbyViewModelProvider).value?.playerId ?? '';
       final currentId = WagerLoadGuard.identity(
         gameId: widget.gameId,
         playerId: nowPid,
@@ -796,8 +851,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
           .limit(1)
           .maybeSingle();
       if (!mounted) return;
-      final nowPid =
-          ref.read(lobbyViewModelProvider).value?.playerId ?? '';
+      final nowPid = ref.read(lobbyViewModelProvider).value?.playerId ?? '';
       final currentId = AnswerLoadGuard.identity(
         gameId: widget.gameId,
         playerId: nowPid,
@@ -830,11 +884,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
   bool _lockDueLocal() {
     final q = _question;
     final openedRaw = q?['opened_at'] as String?;
-    final opened =
-        openedRaw == null ? null : DateTime.tryParse(openedRaw)?.toUtc();
+    final opened = openedRaw == null
+        ? null
+        : DateTime.tryParse(openedRaw)?.toUtc();
     if (opened == null) return false;
-    final duration =
-        (q?['duration_sec'] as int?) ?? _config.defaultDurationSec;
+    final duration = (q?['duration_sec'] as int?) ?? _config.defaultDurationSec;
     return isLockDue(
       openedAtUtc: opened,
       durationSec: duration,
@@ -870,9 +924,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void _startHeartbeat() {
     _heartbeat?.dispose();
     final hb = GameHeartbeat(
-      onBeat: () => supa().rpc('touch_presence', params: {
-        'p_game': widget.gameId,
-      }),
+      onBeat: () =>
+          supa().rpc('touch_presence', params: {'p_game': widget.gameId}),
       interval: const Duration(seconds: 15),
     );
     _heartbeat = hb;
@@ -899,10 +952,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       return;
     }
     if (_autoLockCheckInFlight) return;
-    if (!_autoLock.shouldAttempt(
-      position: localPos,
-      openedAt: localOpenedAt,
-    )) {
+    if (!_autoLock.shouldAttempt(position: localPos, openedAt: localOpenedAt)) {
       return;
     }
     _autoLock.markAttempted(position: localPos, openedAt: localOpenedAt);
@@ -925,7 +975,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
           : DateTime.tryParse(freshOpenedAt)?.toUtc();
       final freshDuration =
           (fresh['duration_sec'] as int?) ?? _config.defaultDurationSec;
-      final due = freshOpened != null &&
+      final due =
+          freshOpened != null &&
           isLockDue(
             openedAtUtc: freshOpened,
             durationSec: freshDuration,
@@ -961,8 +1012,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   void _snack(Object e) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyGameError(e, _lang()))));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(friendlyGameError(e, _lang()))));
     }
   }
 
@@ -970,8 +1021,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     await Clipboard.setData(ClipboardData(text: code));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(AppLocalizations.of(context)!.codeCopied)),
+        SnackBar(content: Text(AppLocalizations.of(context)!.codeCopied)),
       );
     }
   }
@@ -992,12 +1042,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
     setState(() => _submitInFlight = true);
     var succeeded = false;
     try {
-      await supa().rpc('submit_answer', params: {
-        'p_game': snap.gameId,
-        'p_idx': snap.position,
-        'p_text': snap.answerText,
-        'p_wager': snap.wager,
-      });
+      await supa().rpc(
+        'submit_answer',
+        params: {
+          'p_game': snap.gameId,
+          'p_idx': snap.position,
+          'p_text': snap.answerText,
+          'p_wager': snap.wager,
+        },
+      );
       await _loadOwnWagers();
       succeeded = true;
     } catch (e) {
@@ -1033,10 +1086,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
         await supa().rpc('start_game', params: {'p_game': widget.gameId});
       } else {
         final next = ((q['position'] as int?) ?? 0) + 1;
-        await supa().rpc('open_question', params: {
-          'p_game': widget.gameId,
-          'p_idx': next,
-        });
+        await supa().rpc(
+          'open_question',
+          params: {'p_game': widget.gameId, 'p_idx': next},
+        );
       }
       await _rt?.broadcastEvent({'type': 'opened'});
       setState(() => _revealed = null);
@@ -1058,8 +1111,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   Future<void> _reveal() async {
     try {
-      final res =
-          await supa().rpc('reveal_answer', params: {'p_game': widget.gameId});
+      final res = await supa().rpc(
+        'reveal_answer',
+        params: {'p_game': widget.gameId},
+      );
       await _rt?.broadcastEvent({'type': 'revealed'});
       if (mounted) setState(() => _revealed = res as String);
     } catch (e) {
@@ -1100,7 +1155,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final err = _sessionError;
     final l10n = AppLocalizations.of(context)!;
     if (err != null) {
-      return Scaffold(
+      return BrainScaffold(
         appBar: AppBar(title: Text(l10n.gameTitle)),
         body: Center(
           child: Column(
@@ -1123,7 +1178,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         memberCount: _memberCount,
         minPlayers: _config.minPlayers,
       );
-      return Scaffold(
+      return BrainScaffold(
         appBar: AppBar(title: Text(l10n.gameTitle)),
         body: LobbyWaitingView(
           isHost: _isHost,
@@ -1142,26 +1197,40 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final isFinal = pos == _config.finalQuestionIndex;
     final answering = canAnswerIn(_status);
     final lockDue = _lockDueLocal();
-    final wagers =
-        isFinal ? _config.finalWagers : List.generate(10, (i) => i + 1);
+    final wagers = isFinal
+        ? _config.finalWagers
+        : List.generate(10, (i) => i + 1);
     final duration = (q?['duration_sec'] as int?) ?? _config.defaultDurationSec;
-    return Scaffold(
+    return BrainScaffold(
       appBar: AppBar(
-          title: Text(_status.isEmpty
+        title: Text(
+          _status.isEmpty
               ? l10n.gameTitle
-              : '${l10n.gameTitle} · ${gameStatusLabel(l10n, _status)}')),
+              : '${l10n.gameTitle} · ${gameStatusLabel(l10n, _status)}',
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(q?['prompt'] as String? ?? '',
-              style: Theme.of(context).textTheme.titleLarge,
-              textDirection: contentDirection(_gameLang),
-              textAlign:
-                  _gameLang == 'ar' ? TextAlign.right : TextAlign.left),
-          const SizedBox(height: 12),
-          CountdownRing(
-            remainingSec: _remainingSec,
-            durationSec: duration,
+          BrainHeroPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  q?['prompt'] as String? ?? '',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textDirection: contentDirection(_gameLang),
+                  textAlign: _gameLang == 'ar'
+                      ? TextAlign.right
+                      : TextAlign.left,
+                ),
+                const SizedBox(height: 12),
+                CountdownRing(
+                  remainingSec: _remainingSec,
+                  durationSec: duration,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 4),
           // Debug Phase 2 : Presence observable (pas une autorité).
@@ -1192,15 +1261,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   selected: _wager == w,
                   // Réponse + mise = une seule soumission : changer de mise
                   // après sauvegarde rend l'état dirty (resoumission requise).
-                  onSelected: !answering ||
+                  onSelected:
+                      !answering ||
                           !_wagersReady ||
                           _submitInFlight ||
                           (!isFinal && _prevUsedWagers.contains(w))
                       ? null
                       : (_) => setState(() {
-                            _wager = w;
-                            _submission.markEdited();
-                          }),
+                          _wager = w;
+                          _submission.markEdited();
+                        }),
                 ),
             ],
           ),
@@ -1211,11 +1281,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
             ),
           const SizedBox(height: 12),
           ElevatedButton(
-            onPressed: isSubmitAllowed(
-              status: _status,
-              wagersReady: _wagersReady,
-              submitInFlight: _submitInFlight,
-            )
+            onPressed:
+                isSubmitAllowed(
+                  status: _status,
+                  wagersReady: _wagersReady,
+                  submitInFlight: _submitInFlight,
+                )
                 ? _submit
                 : null,
             child: Text(l10n.submitAnswer),
@@ -1228,37 +1299,22 @@ class _GameScreenState extends ConsumerState<GameScreen>
           const Divider(height: 32),
           // Lock piloté par le statut (+ seuil local pour les non-hôtes) ;
           // le reste est strictement piloté par le statut (serveur requis).
-          if (showLockFor(
-            status: _status,
-            isHost: _isHost,
-            lockDue: lockDue,
-          ))
+          if (showLockFor(status: _status, isHost: _isHost, lockDue: lockDue))
             ElevatedButton(
               onPressed: _lock,
-              child: Text(
-                _isHost ? l10n.hostLock : l10n.hostLockLate,
-              ),
+              child: Text(_isHost ? l10n.hostLock : l10n.hostLockLate),
             ),
           if (showRevealFor(status: _status, isHost: _isHost))
-            ElevatedButton(
-              onPressed: _reveal,
-              child: Text(l10n.revealAnswer),
-            ),
+            ElevatedButton(onPressed: _reveal, child: Text(l10n.revealAnswer)),
           if (showBoardFor(status: _status, isHost: _isHost))
             ElevatedButton(
               onPressed: _showLeaderboard,
               child: Text(l10n.hostBoard),
             ),
           if (showNextFor(status: _status, isHost: _isHost, position: pos))
-            ElevatedButton(
-              onPressed: _startOrNext,
-              child: Text(l10n.hostNext),
-            ),
+            ElevatedButton(onPressed: _startOrNext, child: Text(l10n.hostNext)),
           if (showFinishFor(status: _status, isHost: _isHost))
-            ElevatedButton(
-              onPressed: _finish,
-              child: Text(l10n.hostFinish),
-            ),
+            ElevatedButton(onPressed: _finish, child: Text(l10n.hostFinish)),
           if (_revealed case final String revealed)
             Padding(
               padding: const EdgeInsets.only(top: 12),

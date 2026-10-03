@@ -6,6 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/badges.dart';
+import '../../shared/widgets/brain_card.dart';
+import '../../shared/widgets/brain_scaffold.dart';
+import '../../shared/widgets/section_header.dart';
+import '../../shared/widgets/state_views.dart';
 import '../shop/billing_controller.dart';
 import '../shop/billing_errors.dart';
 import 'pack.dart';
@@ -23,7 +28,7 @@ class PacksScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final catalog = ref.watch(packCatalogProvider);
     final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
+    return BrainScaffold(
       appBar: AppBar(
         title: Text(l10n.packs),
         actions: [
@@ -38,38 +43,49 @@ class PacksScreen extends ConsumerWidget {
         ],
       ),
       body: catalog.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(l10n.packLoadError),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(packCatalogProvider),
-                child: Text(l10n.packRetry),
-              ),
-            ],
-          ),
+        loading: () => const BrainLoading(),
+        error: (_, _) => BrainError(
+          message: l10n.packLoadError,
+          onRetry: () => ref.invalidate(packCatalogProvider),
+          retryLabel: l10n.packRetry,
         ),
         data: (c) {
-          if (c.packs.isEmpty) return Center(child: Text(l10n.packEmpty));
+          if (c.packs.isEmpty) return BrainEmpty(message: l10n.packEmpty);
           final lang = _lang(context);
+          final textTheme = Theme.of(context).textTheme;
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              for (final p in c.packs)
-                Card(
-                  child: ListTile(
-                    title: Text(p.localizedTitle(lang)),
-                    subtitle: Text(p.localizedDescription(lang)),
-                    trailing: _PackBadges(
-                      pack: p,
-                      locked: !p.isAccessible(c.activeEntitlements),
-                    ),
-                    onTap: () => context.push('/packs/${p.id}'),
+              for (final p in c.packs) ...[
+                BrainCard(
+                  onTap: () => context.push('/packs/${p.id}'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.localizedTitle(lang),
+                        style: textTheme.titleMedium,
+                      ),
+                      if (p.localizedDescription(lang).isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            p.localizedDescription(lang),
+                            style: textTheme.bodyMedium,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      _PackBadges(
+                        pack: p,
+                        locked: !p.isAccessible(c.activeEntitlements),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 12),
+              ],
             ],
           );
         },
@@ -86,13 +102,16 @@ class _PackBadges extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(pack.isOfficial ? l10n.packOfficial : l10n.packMine),
-        if (pack.isPremium) Text(l10n.packPremium),
-        if (locked) Text(l10n.packLocked),
+    return BrainBadgeRow(
+      badges: [
+        BrainBadge(
+          label: pack.isOfficial ? l10n.packOfficial : l10n.packMine,
+          kind: pack.isOfficial ? BrainBadgeKind.official : BrainBadgeKind.mine,
+        ),
+        if (pack.isPremium)
+          BrainBadge(label: l10n.packPremium, kind: BrainBadgeKind.premium),
+        if (locked)
+          BrainBadge(label: l10n.packLocked, kind: BrainBadgeKind.locked),
       ],
     );
   }
@@ -107,22 +126,14 @@ class PackDetailScreen extends ConsumerWidget {
     final catalog = ref.watch(packCatalogProvider);
     final l10n = AppLocalizations.of(context)!;
     final lang = _lang(context);
-    return Scaffold(
+    return BrainScaffold(
       appBar: AppBar(title: Text(l10n.packs)),
       body: catalog.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(l10n.packLoadError),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(packCatalogProvider),
-                child: Text(l10n.packRetry),
-              ),
-            ],
-          ),
+        loading: () => const BrainLoading(),
+        error: (_, _) => BrainError(
+          message: l10n.packLoadError,
+          onRetry: () => ref.invalidate(packCatalogProvider),
+          retryLabel: l10n.packRetry,
         ),
         data: (c) {
           PackSummary? pack;
@@ -140,26 +151,45 @@ class PackDetailScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(
-                p.localizedTitle(lang),
-                style: Theme.of(context).textTheme.headlineSmall,
+              BrainHeroPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      p.localizedTitle(lang),
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    BrainBadgeRow(
+                      badges: [
+                        BrainBadge(
+                          label: p.isOfficial
+                              ? l10n.packOfficial
+                              : l10n.packMine,
+                          kind: p.isOfficial
+                              ? BrainBadgeKind.official
+                              : BrainBadgeKind.mine,
+                        ),
+                        if (p.isPremium)
+                          BrainBadge(
+                            label: locked
+                                ? '${l10n.packPremium} · ${l10n.packLocked}'
+                                : l10n.packPremium,
+                            kind: locked
+                                ? BrainBadgeKind.locked
+                                : BrainBadgeKind.premium,
+                          ),
+                      ],
+                    ),
+                    if (p.localizedDescription(lang).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(p.localizedDescription(lang)),
+                      ),
+                    if (p.isPremium && locked) _PackBuyButton(pack: p),
+                  ],
+                ),
               ),
-              const SizedBox(height: 4),
-              Text(p.isOfficial ? l10n.packOfficial : l10n.packMine),
-              if (p.localizedDescription(lang).isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(p.localizedDescription(lang)),
-                ),
-              if (p.isPremium) ...[
-                const SizedBox(height: 8),
-                Text(
-                  locked
-                      ? '${l10n.packPremium} · ${l10n.packLocked}'
-                      : l10n.packPremium,
-                ),
-                if (locked) _PackBuyButton(pack: p),
-              ],
               if (editable) ...[
                 const SizedBox(height: 8),
                 OutlinedButton(
@@ -177,11 +207,7 @@ class PackDetailScreen extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: 16),
-              Text(
-                l10n.packPreview,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
+              SectionHeader(title: l10n.packPreview),
               preview.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (_, _) => Text(l10n.packLoadError),
