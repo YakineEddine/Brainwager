@@ -1,5 +1,7 @@
 // Tests polish marque Phase brand-polish : hiérarchie, invariants visuels
 // et comportementaux. Aucune logique métier modifiée ici, que du visuel.
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -223,7 +225,7 @@ void main() {
     );
   });
 
-  testWidgets('E) Home : logo final, aucun wordmark dupliqué', (tester) async {
+  testWidgets('E) Home : logo final, sans slogan dupliqué', (tester) async {
     await _pumpRouter(tester);
     brainRouter.go('/home');
     await tester.pumpAndSettle();
@@ -235,8 +237,26 @@ void main() {
       isTrue,
     );
     expect(find.text('BRAINWAGER'), findsNothing);
-    expect(find.text('Bet on what you know'), findsOneWidget);
+    // Le logo porte déjà sa signature : aucun slogan texte séparé dessous.
+    expect(find.text('Bet on what you know'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  test('D) config launcher : source legacy + mark adaptatif', () {
+    // Contenu versionné : la source opaque reste le legacy, le sigle
+    // transparent est le foreground adaptatif (jamais l'inverse).
+    final yaml = File('flutter_launcher_icons.yaml').readAsStringSync();
+    expect(
+      yaml,
+      contains('image_path: "assets/branding/brainwager_app_icon_source.png"'),
+    );
+    expect(
+      yaml,
+      contains(
+        'adaptive_icon_foreground: "assets/branding/brainwager_mark.png"',
+      ),
+    );
+    expect(yaml, contains('adaptive_icon_background: "#1E1B2E"'));
   });
 
   test('J/K/L) assets requis déclarés et chargeables', () async {

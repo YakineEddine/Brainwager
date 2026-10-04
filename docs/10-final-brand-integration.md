@@ -37,12 +37,12 @@ sans overflow (tests R1–R4 + E).
 Méthode : `flutter_launcher_icons` 0.14.4 (dev), config
 `flutter_launcher_icons.yaml`, `dart run flutter_launcher_icons`.
 Legacy mipmaps + adaptatif (`mipmap-anydpi-v26/ic_launcher.xml`) générés.
-Stratégie adaptive : source unique opaque en foreground (inset 16 %),
-fond uni `#1E1B2E` — la séparation avant/arrière-plan sans retouche
-artwork est impossible depuis une source opaque unique, donc le fond
-reste invisible et l'icône est un plein-bleed sûr aux crops
-circulaire/squircle. `applicationId` (`com.yakineeddine.brainwager`),
-signing, SDK : intouchés. iOS non généré.
+Stratégie adaptive : foreground = `brainwager_mark.png` (transparent) sur
+fond uni `#1E1B2E`, inset 16 % (défaut générateur). La source opaque
+contient déjà un fond arrondi : l'utiliser en foreground produirait une
+"icône dans l'icône" sous masque circulaire/squircle — d'où le sigle
+transparent. Aucune retouche artwork. `applicationId`
+(`com.yakineeddine.brainwager`), signing, SDK : intouchés. iOS non généré.
 
 ## 5. Splash natif
 

@@ -1,14 +1,16 @@
 # Launcher icon Brainwager (généré, ne pas éditer les mipmaps à la main).
-# Source : assets/branding/brainwager_app_icon_source.png (1024x1024, opaque).
+# Legacy : assets/branding/brainwager_app_icon_source.png (1024x1024, opaque).
+# Adaptatif : fond uni #1E1B2E + foreground = brainwager_mark.png
+# (transparent). La source opaque contient déjà un fond arrondi : l'utiliser
+# comme foreground adaptatif créerait une "icône dans l'icône" sous les
+# masques circulaires/squircle — d'où le sigle transparent, inset 16 %
+# (défaut du générateur), crop sûr.
 # Regénérer : dart run flutter_launcher_icons
-# Stratégie adaptive : la source unique opaque sert aussi de foreground,
-# sur fond uni #1E1B2E (fond marque). Aucune retouche artwork : le foreground
-# est inset à 16 % par défaut, crop circulaire/squircle sans surprise.
 # applicationId / signing / SDK : intouchés (voir docs/10 + build.gradle.kts).
 flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/branding/brainwager_app_icon_source.png"
   adaptive_icon_background: "#1E1B2E"
-  adaptive_icon_foreground: "assets/branding/brainwager_app_icon_source.png"
+  adaptive_icon_foreground: "assets/branding/brainwager_mark.png"
   min_sdk_android: 24

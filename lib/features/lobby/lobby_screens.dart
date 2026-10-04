@@ -24,18 +24,17 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final textTheme = Theme.of(context).textTheme;
     return BrainScaffold(
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Marque : logo final (BrainBrand choisit l'asset activé,
-          // repli wordmark uniquement si le chargement échoue).
+          // Marque : le logo final porte déjà sa signature
+          // ("PLAY SMARTER TOGETHER") — aucun slogan redondant dessous.
+          // (La clé l10n tagline reste disponible pour d'autres usages.)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 20),
             child: BrainBrand(variant: BrainBrandVariant.full, centered: true),
           ),
-          Center(child: Text(l10n.tagline, style: textTheme.bodyLarge)),
           const SizedBox(height: 20),
           // Actions primaires : Créer / Rejoindre dominent visuellement.
           BrainEntrance(

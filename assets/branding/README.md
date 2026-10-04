@@ -18,7 +18,8 @@ Activation (faite) :
    (`lib/shared/widgets/brand.dart`) ;
 4. repli wordmark + `errorBuilder` conservés si un chargement échoue.
 
-Icône launcher générée depuis `brainwager_app_icon_source.png`
+Icône launcher générée (legacy : `brainwager_app_icon_source.png` ;
+adaptatif : fond `#1E1B2E` + foreground `brainwager_mark.png`)
 (`flutter_launcher_icons`, config `flutter_launcher_icons.yaml`).
 Splash généré depuis `brainwager_splash_mark.png`
 (`flutter_native_splash`, config `flutter_native_splash.yaml`).
