@@ -1,25 +1,26 @@
-# assets/branding — Emplacements du logo Brainwager (artwork final à venir)
+# assets/branding — Logo final Brainwager (artwork approuvé, ACTIVÉ)
 
-Ce dossier accueillera les assets finaux (fournis séparément) :
+Contenu (ne pas modifier, ne pas recompresser) :
 
-- `brainwager_logo.png` — logo horizontal complet
-- `brainwager_logo_compact.png` — logo compact
-- `brainwager_mark.png` — sigle seul
-- `brainwager_app_icon_source.png` — source icône (carré, 1024×1024 min)
-- `brainwager_splash_mark.png` — sigle pour l'écran de démarrage
+- `brainwager_logo.png` — logo horizontal (2000×512, RGBA) → `BrainBrand.full`
+- `brainwager_logo_compact.png` — logo compact (1024×1024, RGBA) → `compact`
+- `brainwager_mark.png` — sigle (1024×1024, RGBA) → `markOnly`
+- `brainwager_app_icon_source.png` — source icône (1024×1024, opaque RGB)
+- `brainwager_splash_mark.png` — sigle splash (1024×1024, RGBA)
 
-Règles :
-- ne PAS commiter de faux visuels raster en attendant ;
-- `BrainBrand` (`lib/shared/widgets/brand.dart`) affiche aujourd'hui
-  TOUJOURS le wordmark de repli : `_brandAssetFor()` retourne
-  volontairement null tant que l'artwork n'est pas approuvé ;
-- déposer des PNG ici seuls ne suffit PAS à les activer (aucune magie).
+Vérifié : PNG valides, fonds transparents (coins/bords alpha 0, pas de
+rectangle noir/blanc), centres opaques, `BoxFit.contain` côté Flutter.
 
-Après approbation de l'artwork final, activer en 4 étapes :
-1. déposer les PNG listés ci-dessus dans `assets/branding/` ;
-2. déclarer `assets/branding/` dans `pubspec.yaml` (`flutter/assets`) ;
-3. mapper chaque `BrainBrandVariant` vers son chemin dans
-   `_brandAssetFor()` (`lib/shared/widgets/brand.dart`) ;
-4. vérifier le repli (`errorBuilder`) et FR/EN/AR + RTL.
+Activation (faite) :
+1. PNG déposés ici ;
+2. `assets/branding/` déclaré dans `pubspec.yaml` ;
+3. variantes mappées dans `brainBrandAsset()`
+   (`lib/shared/widgets/brand.dart`) ;
+4. repli wordmark + `errorBuilder` conservés si un chargement échoue.
 
-Voir `docs/09-brand-and-polish.md` (splash, icône, direction de marque).
+Icône launcher générée depuis `brainwager_app_icon_source.png`
+(`flutter_launcher_icons`, config `flutter_launcher_icons.yaml`).
+Splash généré depuis `brainwager_splash_mark.png`
+(`flutter_native_splash`, config `flutter_native_splash.yaml`).
+
+Voir `docs/09-brand-and-polish.md` et `docs/10-final-brand-integration.md`.

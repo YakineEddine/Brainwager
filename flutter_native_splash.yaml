@@ -1,0 +1,16 @@
+# Splash natif Brainwager (généré : dart run flutter_native_splash:create).
+# Cible : démarrage rapide, fond profond marque, sigle centré, sans animation
+# longue ni tagline ni fausse progression. Bootstrap/logique inchangés.
+# Android 12+ : mêmes couleur/image (règles splash Android 12 supportées).
+# iOS/web : non générés (ne pas toucher sans configuration dédiée).
+flutter_native_splash:
+  color: "#1E1B2E"
+  image: assets/branding/brainwager_splash_mark.png
+  android: true
+  ios: false
+  web: false
+  fullscreen: true
+  android_12:
+    color: "#1E1B2E"
+    image: assets/branding/brainwager_splash_mark.png
+    icon_background_color: "#1E1B2E"

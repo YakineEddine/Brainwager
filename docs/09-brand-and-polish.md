@@ -12,14 +12,15 @@ motif jetons/mises. Aucun emprunt tiers (logo, layout, assets).
 
 ## 2. Slots d'assets (`assets/branding/`)
 
-Emplacements documentés (`assets/branding/README.md`, sans faux raster) :
-`brainwager_logo.png`, `brainwager_logo_compact.png`, `brainwager_mark.png`,
-`brainwager_app_icon_source.png`, `brainwager_splash_mark.png`.
+Emplacements et activation finale (`assets/branding/README.md`) :
+`brainwager_logo.png` (2000×512), `brainwager_logo_compact.png` (1024²),
+`brainwager_mark.png` (1024²), `brainwager_app_icon_source.png` (1024²
+opaque), `brainwager_splash_mark.png` (1024²) — fonds transparents vérifiés
+par script (coins/bords alpha 0, centres opaques).
 `BrainBrand` (variantes full/compact/markOnly, taille configurable,
-RTL-safe) affiche aujourd'hui TOUJOURS le repli wordmark : l'activation
-exige, après approbation, (1) dépôt des PNG, (2) déclaration
-`assets/branding/` dans `pubspec.yaml`, (3) mapping des variantes dans
-`_brandAssetFor`, (4) vérification repli/`errorBuilder`.
+RTL-safe) affiche désormais les assets réels, mappés dans
+`brainBrandAsset()` ; repli wordmark + `errorBuilder` conservés en cas
+d'échec de chargement. Voir `docs/10-final-brand-integration.md`.
 
 ## 3. Home
 

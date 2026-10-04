@@ -1,11 +1,6 @@
 // Marque Brainwager : point d'intégration unique du logo.
-// L'artwork final arrive séparément ; en attendant, repli wordmark texte
-// (aucun faux raster, aucune référence d'asset cassée).
-// IMPORTANT : `_brandAssetFor()` retourne volontairement toujours null.
-// Déposer des PNG dans assets/branding/ ne suffit PAS à les activer.
-// Activation après approbation (4 étapes, voir assets/branding/README.md) :
-// 1. ajouter les PNG, 2. déclarer assets/branding/ dans pubspec.yaml,
-// 3. mapper les variantes ci-dessous, 4. vérifier repli/errorBuilder.
+// Artwork final approuvé et activé (assets/branding/, déclaré pubspec).
+// Le repli wordmark + errorBuilder restent actifs si un chargement échoue.
 // Variantes : full / compact / markOnly. Tailles configurables, RTL-safe.
 import 'package:flutter/material.dart';
 
@@ -13,12 +8,21 @@ import '../../app/theme.dart';
 
 enum BrainBrandVariant { full, compact, markOnly }
 
-/// Chemins futurs (assets/branding/). Null = repli texte, jamais d'erreur.
-String? _brandAssetFor(BrainBrandVariant variant) {
-  // Activer au cas par cas quand les PNG finaux sont déposés ET déclarés
-  // dans pubspec.yaml. Pour l'instant : toujours repli.
-  return null;
+/// Chemins finaux (assets/branding/, artwork approuvé, déclaré pubspec).
+/// Fonction publique pure pour testabilité ; le widget l'utilise tel quel.
+/// Le repli wordmark + errorBuilder restent actifs si un chargement échoue.
+String? brainBrandAsset(BrainBrandVariant variant) {
+  switch (variant) {
+    case BrainBrandVariant.full:
+      return 'assets/branding/brainwager_logo.png';
+    case BrainBrandVariant.compact:
+      return 'assets/branding/brainwager_logo_compact.png';
+    case BrainBrandVariant.markOnly:
+      return 'assets/branding/brainwager_mark.png';
+  }
 }
+
+String? _brandAssetFor(BrainBrandVariant variant) => brainBrandAsset(variant);
 
 class BrainBrand extends StatelessWidget {
   final BrainBrandVariant variant;

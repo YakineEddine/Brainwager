@@ -29,8 +29,8 @@ class HomeScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Marque : wordmark actuel, logo final branché via BrainBrand
-          // dès que les assets arrivent (aucun faux visuel en attendant).
+          // Marque : logo final (BrainBrand choisit l'asset activé,
+          // repli wordmark uniquement si le chargement échoue).
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 20),
             child: BrainBrand(variant: BrainBrandVariant.full, centered: true),

@@ -1,6 +1,7 @@
 // Tests polish marque Phase brand-polish : hiérarchie, invariants visuels
 // et comportementaux. Aucune logique métier modifiée ici, que du visuel.
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,6 +49,14 @@ Future<void> _pumpRouter(WidgetTester tester) {
       ),
     ),
   );
+}
+
+/// Bundle qui échoue toujours : prouve le repli wordmark (errorBuilder).
+class _FailingBundle extends CachingAssetBundle {
+  @override
+  Future<ByteData> load(String key) async {
+    throw FlutterError('asset manquant (test)');
+  }
 }
 
 void main() {
@@ -183,23 +192,65 @@ void main() {
     expect(validateReportReason('bonne raison de signalement'), isNull);
   });
 
-  testWidgets('J) marque : repli wordmark sans asset', (tester) async {
-    for (final variant in BrainBrandVariant.values) {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: BrainBrand(variant: variant)),
-        ),
-      );
-      await tester.pump();
-      // Aucun asset déposé : le repli texte/icone s'affiche, sans crash.
-      expect(find.text('B'), findsWidgets);
-    }
+  testWidgets('J) marque : repli wordmark si asset en échec', (tester) async {
+    // Bundle qui échoue : errorBuilder doit afficher le repli, sans crash.
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: BrainBrand(variant: BrainBrandVariant.full)),
+      MaterialApp(
+        home: Scaffold(
+          body: DefaultAssetBundle(
+            bundle: _FailingBundle(),
+            child: const BrainBrand(variant: BrainBrandVariant.full),
+          ),
+        ),
       ),
     );
+    await tester.pump();
     expect(find.text('BRAINWAGER'), findsOneWidget);
+  });
+
+  test('A/B/C) BrainBrand résout les chemins finaux', () {
+    expect(
+      brainBrandAsset(BrainBrandVariant.full),
+      'assets/branding/brainwager_logo.png',
+    );
+    expect(
+      brainBrandAsset(BrainBrandVariant.compact),
+      'assets/branding/brainwager_logo_compact.png',
+    );
+    expect(
+      brainBrandAsset(BrainBrandVariant.markOnly),
+      'assets/branding/brainwager_mark.png',
+    );
+  });
+
+  testWidgets('E) Home : logo final, aucun wordmark dupliqué', (tester) async {
+    await _pumpRouter(tester);
+    brainRouter.go('/home');
+    await tester.pumpAndSettle();
+    final images = tester.widgetList<Image>(find.byType(Image));
+    expect(
+      images
+          .map((i) => (i.image as AssetImage).assetName)
+          .contains('assets/branding/brainwager_logo.png'),
+      isTrue,
+    );
+    expect(find.text('BRAINWAGER'), findsNothing);
+    expect(find.text('Bet on what you know'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('J/K/L) assets requis déclarés et chargeables', () async {
+    const files = [
+      'assets/branding/brainwager_logo.png',
+      'assets/branding/brainwager_logo_compact.png',
+      'assets/branding/brainwager_mark.png',
+      'assets/branding/brainwager_app_icon_source.png',
+      'assets/branding/brainwager_splash_mark.png',
+    ];
+    for (final f in files) {
+      final data = await rootBundle.load(f);
+      expect(data.lengthInBytes, greaterThan(0), reason: f);
+    }
   });
 
   Future<void> pumpHomeNarrow(
