@@ -61,11 +61,11 @@ class _StandingRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final medal = rank == 1
-        ? BrainColors.gold
+        ? BrainColors.goldDeep
         : rank == 2
         ? BrainColors.textPrimary
         : rank == 3
-        ? BrainColors.gold.withValues(alpha: 0.65)
+        ? BrainColors.goldDeep.withValues(alpha: 0.7)
         : BrainColors.textSecondary;
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -103,7 +103,7 @@ class _StandingRow extends StatelessWidget {
             '${standing.score}',
             style: textTheme.headlineSmall?.copyWith(
               fontSize: 20,
-              color: rank == 1 ? BrainColors.gold : null,
+              color: rank == 1 ? BrainColors.goldDeep : null,
             ),
           ),
         ],

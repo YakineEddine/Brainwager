@@ -31,13 +31,23 @@ void main() {
         if (r is GoRoute) {
           paths.add(r.path);
           collect(r.routes);
+        } else if (r is StatefulShellRoute) {
+          for (final branch in r.branches) {
+            collect(branch.routes);
+          }
+        } else if (r is ShellRoute) {
+          collect(r.routes);
         }
       }
     }
+
     collect(brainRouter.configuration.routes);
     expect(paths, contains('/packs'));
     expect(paths, contains('/packs/:id'));
     expect(paths, contains('/game/:id'));
+    expect(paths, contains('/home'));
+    expect(paths, contains('/shop'));
+    expect(paths, contains('/profile'));
   });
 
   testWidgets('U) /packs/edit résout l’éditeur, PAS le détail', (tester) async {
@@ -62,11 +72,13 @@ void main() {
     await _pumpRouter(tester);
     brainRouter.go('/packs');
     await tester.pumpAndSettle();
-    expect(find.text('Packs'), findsOneWidget);
+    // Titre AppBar Packs + onglet navbar Packs (shell persistant).
+    expect(find.text('Packs'), findsWidgets);
   });
 
-  testWidgets('Q) /packs/import résout l’import, pas le détail',
-      (tester) async {
+  testWidgets('Q) /packs/import résout l’import, pas le détail', (
+    tester,
+  ) async {
     await _pumpRouter(tester);
     brainRouter.go('/packs/import');
     await tester.pumpAndSettle();
@@ -74,8 +86,9 @@ void main() {
     expect(find.text('Share code'), findsOneWidget);
   });
 
-  testWidgets('R) /packs/shared/:code résout le partagé, pas le détail',
-      (tester) async {
+  testWidgets('R) /packs/shared/:code résout le partagé, pas le détail', (
+    tester,
+  ) async {
     await _pumpRouter(tester);
     brainRouter.go('/packs/shared/PK-AB12');
     await tester.pumpAndSettle();

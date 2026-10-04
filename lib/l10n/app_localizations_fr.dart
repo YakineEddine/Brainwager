@@ -398,4 +398,35 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get shopCanceled => 'Achat annulé';
+
+  @override
+  String get navHome => 'Accueil';
+
+  @override
+  String get navPacks => 'Packs';
+
+  @override
+  String get navShop => 'Boutique';
+
+  @override
+  String get navProfile => 'Profil';
+
+  @override
+  String get profileTitle => 'Profil';
+
+  @override
+  String get profileGuest => 'Invité';
+
+  @override
+  String get profileAnonymous => 'Connecté anonymement';
+
+  @override
+  String get profileDisplayName => 'Pseudo affiché';
+
+  @override
+  String get profileLocale => 'Langue';
+
+  @override
+  String get profileComingSoon =>
+      'Plus d\'options de compte bientôt disponibles';
 }

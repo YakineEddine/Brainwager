@@ -855,6 +855,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Purchase canceled'**
   String get shopCanceled;
+
+  /// No description provided for @navHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get navHome;
+
+  /// No description provided for @navPacks.
+  ///
+  /// In en, this message translates to:
+  /// **'Packs'**
+  String get navPacks;
+
+  /// No description provided for @navShop.
+  ///
+  /// In en, this message translates to:
+  /// **'Shop'**
+  String get navShop;
+
+  /// No description provided for @navProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get navProfile;
+
+  /// No description provided for @profileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profileTitle;
+
+  /// No description provided for @profileGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest'**
+  String get profileGuest;
+
+  /// No description provided for @profileAnonymous.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in anonymously'**
+  String get profileAnonymous;
+
+  /// No description provided for @profileDisplayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name'**
+  String get profileDisplayName;
+
+  /// No description provided for @profileLocale.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get profileLocale;
+
+  /// No description provided for @profileComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'More account options coming soon'**
+  String get profileComingSoon;
 }
 
 class _AppLocalizationsDelegate

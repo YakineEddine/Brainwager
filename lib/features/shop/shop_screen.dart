@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/badges.dart';
 import '../../shared/widgets/brain_card.dart';
 import '../../shared/widgets/brain_scaffold.dart';
+import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/state_views.dart';
 import '../packs/pack.dart';
 import '../packs/pack_providers.dart';
@@ -20,6 +21,27 @@ import 'billing_models.dart';
 String _lang(BuildContext context) =>
     Localizations.localeOf(context).languageCode;
 
+/// Section visuelle boutique (préparée pour les futurs groupes :
+/// BrainCoins, Avatars, Packs, offres, Remove Ads). Aujourd'hui seuls
+/// les groupes réellement configurés sont rendus — jamais de faux
+/// contenu.
+class ShopSection extends StatelessWidget {
+  final String title;
+  final Widget child;
+  const ShopSection({super.key, required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(title: title),
+        child,
+      ],
+    );
+  }
+}
+
 class ShopScreen extends ConsumerStatefulWidget {
   const ShopScreen({super.key});
 
@@ -28,20 +50,30 @@ class ShopScreen extends ConsumerStatefulWidget {
 }
 
 class _ShopScreenState extends ConsumerState<ShopScreen> {
-  Set<String>? _lastInitIds;
+  /// IDs déjà demandés au billing (union croissante). L'init ne démarre
+  /// qu'une fois puis seulement si de nouveaux SKU apparaissent :
+  /// jamais de relance à chaque rebuild (Refresh manuel = retry explicite).
+  final Set<String> _requestedIds = {};
+  bool _initStarted = false;
+  bool _initInFlight = false;
 
   void _ensureBilling(Set<String> ids) {
-    if (_lastInitIds != null &&
-        _lastInitIds!.length == ids.length &&
-        _lastInitIds!.containsAll(ids)) {
-      return;
-    }
-    _lastInitIds = ids;
-    Future.microtask(() {
-      if (!mounted) return;
-      ref
+    final before = _requestedIds.length;
+    _requestedIds.addAll(ids);
+    final grew = _requestedIds.length > before;
+    if (_initInFlight) return;
+    if (_initStarted && !grew) return;
+    _initStarted = true;
+    _initInFlight = true;
+    final wanted = Set<String>.of(_requestedIds);
+    Future.microtask(() async {
+      if (!mounted) {
+        return;
+      }
+      await ref
           .read(billingControllerProvider.notifier)
-          .ensureInitialized(productIds: ids);
+          .ensureInitialized(productIds: wanted);
+      if (mounted) setState(() => _initInFlight = false);
     });
   }
 
@@ -64,16 +96,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
         ),
         data: (c) {
           final ids = billingProductIds(c.packs);
-          // Best-effort sync/readiness avant tout achat.
-          if (!billing.initialized) {
-            _ensureBilling(ids);
-            return const BrainLoading();
-          }
-          if (_lastInitIds == null ||
-              _lastInitIds!.length != ids.length ||
-              !_lastInitIds!.containsAll(ids)) {
-            _ensureBilling(ids);
-          }
+          // Init billing en arrière-plan : la page reste stable et visible
+          // immédiatement, même avant la fin de l'initialisation.
+          _ensureBilling(ids);
           return _ShopBody(
             packs: c.packs,
             // Set vide autoritaire : une fois chargé, il fait foi même
@@ -127,6 +152,22 @@ class _ShopBody extends ConsumerWidget {
         .toList();
 
     Widget statusBanner() {
+      // Initialisation en cours : la page est déjà visible, seule cette
+      // section patiente (jamais de spinner plein écran pour le billing).
+      if (!billing.initialized) {
+        return const BrainCard(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ],
+          ),
+        );
+      }
       if (!billing.supported) {
         return ListTile(title: Text(l10n.shopUnsupported));
       }
@@ -222,7 +263,7 @@ class _ShopBody extends ConsumerWidget {
                     Text(
                       price,
                       style: textTheme.titleLarge?.copyWith(
-                        color: BrainColors.gold,
+                        color: BrainColors.goldDeep,
                       ),
                     )
                   else
@@ -242,15 +283,31 @@ class _ShopBody extends ConsumerWidget {
       children: [
         statusBanner(),
         feedbackRow(),
-        for (final p in premiumPacks) ...[
-          productRow(
-            title: p.localizedTitle(lang),
-            sku: p.priceSku!,
-            onTap: () => context.push('/packs/${p.id}'),
-          ),
-          const SizedBox(height: 12),
+        if (!billing.initialized)
+          // Produits pas encore connus : section en attente, page stable.
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: BrainLoading(),
+          )
+        else ...[
+          if (premiumPacks.isNotEmpty)
+            ShopSection(
+              title: l10n.packs,
+              child: Column(
+                children: [
+                  for (final p in premiumPacks) ...[
+                    productRow(
+                      title: p.localizedTitle(lang),
+                      sku: p.priceSku!,
+                      onTap: () => context.push('/packs/${p.id}'),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ],
+              ),
+            ),
+          productRow(title: l10n.shopRemoveAds, sku: removeAdsSku),
         ],
-        productRow(title: l10n.shopRemoveAds, sku: removeAdsSku),
         const SizedBox(height: 16),
         Row(
           children: [

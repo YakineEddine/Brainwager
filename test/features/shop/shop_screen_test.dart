@@ -56,6 +56,12 @@ void main() {
         if (r is GoRoute) {
           paths.add(r.path);
           collect(r.routes);
+        } else if (r is StatefulShellRoute) {
+          for (final branch in r.branches) {
+            collect(branch.routes);
+          }
+        } else if (r is ShellRoute) {
+          collect(r.routes);
         }
       }
     }

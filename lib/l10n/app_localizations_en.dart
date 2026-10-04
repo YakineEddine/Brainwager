@@ -396,4 +396,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shopCanceled => 'Purchase canceled';
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navPacks => 'Packs';
+
+  @override
+  String get navShop => 'Shop';
+
+  @override
+  String get navProfile => 'Profile';
+
+  @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get profileGuest => 'Guest';
+
+  @override
+  String get profileAnonymous => 'Signed in anonymously';
+
+  @override
+  String get profileDisplayName => 'Display name';
+
+  @override
+  String get profileLocale => 'Language';
+
+  @override
+  String get profileComingSoon => 'More account options coming soon';
 }

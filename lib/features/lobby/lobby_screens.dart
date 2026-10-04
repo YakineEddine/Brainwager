@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/design_tokens.dart';
 import '../../app/theme.dart';
 import '../../core/utils/game_errors.dart';
 import '../../l10n/app_localizations.dart';
@@ -28,12 +29,24 @@ class HomeScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Marque : le logo final porte déjà sa signature
-          // ("PLAY SMARTER TOGETHER") — aucun slogan redondant dessous.
-          // (La clé l10n tagline reste disponible pour d'autres usages.)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: BrainBrand(variant: BrainBrandVariant.full, centered: true),
+          // Hero lumineux : le logo final (conçu pour fond sombre) reste
+          // lisible sur dégradé teal -> cobalt. Le reste de Home est clair.
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [BrainColors.turquoise, BrainColors.electricViolet],
+              ),
+              borderRadius: BorderRadius.circular(BrainRadius.lg),
+            ),
+            child: const BrainBrand(
+              variant: BrainBrandVariant.full,
+              height: 64,
+              centered: true,
+            ),
           ),
           const SizedBox(height: 20),
           // Actions primaires : Créer / Rejoindre dominent visuellement.

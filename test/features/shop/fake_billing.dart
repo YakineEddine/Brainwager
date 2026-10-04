@@ -134,6 +134,16 @@ class FakeBillingBackend implements BillingBackend {
   int restoreCalls = 0;
   int syncCalls = 0;
 
+  /// Quand non null, syncPurchases attend le gate (init bloquée en test).
+  Completer<void>? syncGate;
+
+  void blockSync() => syncGate = Completer<void>();
+
+  void unblockSync() {
+    syncGate?.complete();
+    syncGate = null;
+  }
+
   @override
   Future<BillingBackendResult> verifyPurchase({
     required String sku,
@@ -180,6 +190,8 @@ class FakeBillingBackend implements BillingBackend {
   Future<BillingBackendResult> syncPurchases() async {
     syncCalls++;
     modes.add('sync');
+    final gate = syncGate;
+    if (gate != null) await gate.future;
     return syncResult;
   }
 }

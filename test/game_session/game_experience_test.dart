@@ -104,12 +104,12 @@ void main() {
         ),
       ),
     );
-    // Le jeton sélectionné est le seul rempli or (les autres : surface).
-    final goldFills = find.byWidgetPredicate((w) {
+    // Le jeton sélectionné est le seul rempli cobalt (les autres : surface).
+    final cobaltFills = find.byWidgetPredicate((w) {
       final d = w is Container ? w.decoration : null;
-      return d is BoxDecoration && d.color == BrainColors.gold;
+      return d is BoxDecoration && d.color == BrainColors.electricViolet;
     });
-    expect(goldFills, findsOneWidget);
+    expect(cobaltFills, findsOneWidget);
     // Le texte du jeton sélectionné reste présent et unique.
     expect(find.text('7'), findsOneWidget);
   });

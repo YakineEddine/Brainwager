@@ -125,5 +125,15 @@
   "shopUnsupported": "Achats disponibles uniquement sur Android",
   "shopNoProducts": "Aucun produit configuré",
   "shopRemoveAds": "Supprimer les pubs",
-  "shopCanceled": "Achat annulé"
+  "shopCanceled": "Achat annulé",
+  "navHome": "Accueil",
+  "navPacks": "Packs",
+  "navShop": "Boutique",
+  "navProfile": "Profil",
+  "profileTitle": "Profil",
+  "profileGuest": "Invité",
+  "profileAnonymous": "Connecté anonymement",
+  "profileDisplayName": "Pseudo affiché",
+  "profileLocale": "Langue",
+  "profileComingSoon": "Plus d'options de compte bientôt disponibles"
 }

@@ -21,11 +21,11 @@ class BrainBadge extends StatelessWidget {
       case BrainBadgeKind.locked:
         return (BrainColors.coral, BrainColors.deepBackground);
       case BrainBadgeKind.official:
-        return (BrainColors.electricViolet, BrainColors.textPrimary);
+        return (BrainColors.electricViolet, Colors.white);
       case BrainBadgeKind.mine:
       case BrainBadgeKind.owned:
       case BrainBadgeKind.success:
-        return (BrainColors.turquoise, BrainColors.deepBackground);
+        return (BrainColors.turquoise, Colors.white);
       case BrainBadgeKind.info:
         return (BrainColors.surfaceHigh, BrainColors.textPrimary);
     }

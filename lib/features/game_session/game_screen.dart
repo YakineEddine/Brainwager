@@ -1473,7 +1473,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.lock, color: BrainColors.gold),
+                  const Icon(Icons.lock, color: BrainColors.goldDeep),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(

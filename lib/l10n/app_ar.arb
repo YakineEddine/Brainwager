@@ -125,5 +125,15 @@
   "shopUnsupported": "المشتريات متاحة على Android فقط",
   "shopNoProducts": "لا توجد منتجات مهيأة",
   "shopRemoveAds": "إزالة الإعلانات",
-  "shopCanceled": "تم إلغاء الشراء"
+  "shopCanceled": "تم إلغاء الشراء",
+  "navHome": "الرئيسية",
+  "navPacks": "الحزم",
+  "navShop": "المتجر",
+  "navProfile": "الملف الشخصي",
+  "profileTitle": "الملف الشخصي",
+  "profileGuest": "ضيف",
+  "profileAnonymous": "مسجل الدخول كضيف",
+  "profileDisplayName": "الاسم المعروض",
+  "profileLocale": "اللغة",
+  "profileComingSoon": "خيارات حساب إضافية قريبًا"
 }

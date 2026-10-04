@@ -33,14 +33,21 @@ class PacksScreen extends ConsumerWidget {
     return BrainScaffold(
       appBar: AppBar(
         title: Text(l10n.packs),
+        // Menu compact : tient à 320px même en 1.3x (deux TextButtons
+        // débordaient). Mêmes routes, mêmes libellés.
         actions: [
-          TextButton(
-            onPressed: () => context.push('/packs/edit'),
-            child: Text(l10n.packCreate),
-          ),
-          TextButton(
-            onPressed: () => context.push('/packs/import'),
-            child: Text(l10n.packImport),
+          PopupMenuButton<String>(
+            onSelected: (v) {
+              if (v == 'create') {
+                context.push('/packs/edit');
+              } else {
+                context.push('/packs/import');
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'create', child: Text(l10n.packCreate)),
+              PopupMenuItem(value: 'import', child: Text(l10n.packImport)),
+            ],
           ),
         ],
       ),
@@ -103,7 +110,9 @@ class _PackCatalogCard extends StatelessWidget {
                 child: Text(
                   pack.localizedTitle(lang),
                   style: pack.isPremium && locked
-                      ? textTheme.titleLarge?.copyWith(color: BrainColors.gold)
+                      ? textTheme.titleLarge?.copyWith(
+                          color: BrainColors.goldDeep,
+                        )
                       : textTheme.titleMedium,
                 ),
               ),

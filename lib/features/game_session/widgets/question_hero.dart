@@ -78,7 +78,7 @@ class BrainQuestionHero extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: BrainColors.gold,
+                color: BrainColors.goldDeep,
                 fontWeight: FontWeight.w700,
               ),
             ),

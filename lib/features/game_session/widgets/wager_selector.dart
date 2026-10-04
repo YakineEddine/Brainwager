@@ -1,6 +1,6 @@
 // Sélecteur de mise Phase UI-2 : jetons de jeu, pas un formulaire.
 // Normales : 1–10. Finale : 0/10/20 (variante accentuée).
-// États : sélectionnable / sélectionné (or, évident) / déjà-utilisé
+// États : sélectionnable / sélectionné (cobalt, évident) / déjà-utilisé
 // (visible mais indisponible) / désactivé. Règles inchangées (appelant).
 import 'package:flutter/material.dart';
 
@@ -78,12 +78,12 @@ class BrainWagerToken extends StatelessWidget {
     final size = isFinal ? 68.0 : 56.0;
     final dimmed = !enabled || used;
     final fill = selected
-        ? BrainColors.gold
+        ? BrainColors.electricViolet
         : dimmed
         ? BrainColors.surfaceHigh.withValues(alpha: 0.6)
         : BrainColors.surfaceHigh;
     final border = selected
-        ? BrainColors.gold
+        ? BrainColors.electricViolet
         : isFinal
         ? BrainColors.gold.withValues(alpha: 0.7)
         : BrainColors.electricViolet.withValues(alpha: 0.6);
@@ -91,7 +91,7 @@ class BrainWagerToken extends StatelessWidget {
       fontSize: isFinal ? 22 : 19,
       fontWeight: FontWeight.w800,
       color: selected
-          ? BrainColors.deepBackground
+          ? Colors.white
           : dimmed
           ? BrainColors.textSecondary
           : BrainColors.textPrimary,
@@ -111,7 +111,7 @@ class BrainWagerToken extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: BrainColors.gold.withValues(alpha: 0.5),
+                    color: BrainColors.electricViolet.withValues(alpha: 0.5),
                     blurRadius: 16,
                     spreadRadius: 1,
                   ),

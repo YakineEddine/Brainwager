@@ -49,7 +49,7 @@ class BrainCard extends StatelessWidget {
   );
 }
 
-/// Panneau hero : surface haute + bordure or subtile, pour codes/CTA.
+/// Panneau hero : surface blanche + bordure claire + ombre douce.
 /// Ex. code de partie, prix, statuts mis en avant.
 class BrainHeroPanel extends StatelessWidget {
   final Widget child;
@@ -66,17 +66,14 @@ class BrainHeroPanel extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: BrainColors.surfaceHigh,
+        color: BrainColors.surface,
         borderRadius: BorderRadius.circular(BrainRadius.lg),
-        border: Border.all(
-          color: BrainColors.gold.withValues(alpha: 0.45),
-          width: 1.5,
-        ),
-        boxShadow: [
+        border: Border.all(color: BrainColors.outline, width: 1),
+        boxShadow: const [
           BoxShadow(
-            color: BrainColors.electricViolet.withValues(alpha: 0.35),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            color: Color(0x1417324D),
+            blurRadius: 18,
+            offset: Offset(0, 6),
           ),
         ],
       ),

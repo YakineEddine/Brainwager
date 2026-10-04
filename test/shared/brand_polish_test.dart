@@ -69,6 +69,12 @@ void main() {
         if (r is GoRoute) {
           paths.add(r.path);
           collect(r.routes);
+        } else if (r is StatefulShellRoute) {
+          for (final branch in r.branches) {
+            collect(branch.routes);
+          }
+        } else if (r is ShellRoute) {
+          collect(r.routes);
         }
       }
     }
@@ -313,14 +319,16 @@ void main() {
     tester,
   ) async {
     await pumpHomeNarrow(tester, locale: const Locale('fr'));
-    expect(find.text('Boutique'), findsOneWidget);
+    // Boutique : carte Home + onglet navbar (même libellé, deux endroits).
+    expect(find.text('Boutique'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('R3) Home 320px AR RTL : secondaires visibles', (tester) async {
     await pumpHomeNarrow(tester, locale: const Locale('ar'));
-    expect(find.text('الحزم'), findsOneWidget);
-    expect(find.text('المتجر'), findsOneWidget);
+    // Cartes Home + onglets navbar partagent les libellés.
+    expect(find.text('الحزم'), findsWidgets);
+    expect(find.text('المتجر'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 

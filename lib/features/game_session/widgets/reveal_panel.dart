@@ -31,7 +31,11 @@ class BrainRevealPanel extends StatelessWidget {
       child: BrainHeroPanel(
         child: Column(
           children: [
-            const Icon(Icons.celebration, color: BrainColors.gold, size: 36),
+            const Icon(
+              Icons.celebration,
+              color: BrainColors.goldDeep,
+              size: 36,
+            ),
             const SizedBox(height: 8),
             RevealedAnswerView(
               label: label,

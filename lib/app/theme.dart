@@ -1,34 +1,41 @@
-// Design system Brainwager : violet électrique, jaune or, turquoise. Dark-first.
-// Phase UI-1 : échelle typographique, thèmes boutons/cartes/chips/champs,
-// AppBar et états pensés "party game premium" (hiérarchie forte, CTA visibles).
-// Les couleurs de marque restent identiques ; seule l'application s'étoffe.
+// Design system Brainwager : LIGHT-FIRST (ticket light-shell).
+// Palette claire : fond cloud, surfaces blanches, teal/cobalt/corail.
+// Les hexadécimaux de marque sombres ne dominent plus le chrome ;
+// l'artwork approuvé (foncé) vit dans des surfaces hero dédiées.
+// Mêmes noms de rôles (BrainColors) pour limiter la casse : les valeurs
+// ont été remappées vers la sémantique claire (voir BrainRoles).
 import 'package:flutter/material.dart';
 
 import 'design_tokens.dart';
 
 class BrainColors {
-  static const electricViolet = Color(0xFF7C3AED);
-  static const electricVioletDeep = Color(0xFF5B21B6);
-  static const deepBackground = Color(0xFF1E1B2E);
-  static const deepBackgroundTop = Color(0xFF2B2350);
-  static const surface = Color(0xFF2A2542);
-  static const surfaceHigh = Color(0xFF352C5C);
-  static const outline = Color(0xFF4C4480);
+  // Primaire interactive : cobalt (sélection, CTA, liens).
+  static const electricViolet = Color(0xFF3B82F6);
+  static const electricVioletDeep = Color(0xFF2456C4);
+  // Fonds : cloud + blanc.
+  static const deepBackground = Color(0xFFF5FBFA);
+  static const deepBackgroundTop = Color(0xFFFFFFFF);
+  static const surface = Color(0xFFFFFFFF);
+  static const surfaceHigh = Color(0xFFEAF4F3);
+  static const outline = Color(0xFFD7E3E1);
+  // Accents : or = détail premium/ranking uniquement.
   static const gold = Color(0xFFFFC93C);
-  static const goldDeep = Color(0xFFB98600);
-  static const turquoise = Color(0xFF2DD4BF);
+  static const goldDeep = Color(0xFF8A6100);
+  // Succès/positif : teal. Danger/critique : corail.
+  static const turquoise = Color(0xFF00A7A0);
+  static const tealDeep = Color(0xFF00776F);
   static const coral = Color(0xFFFF6B6B);
-  static const textPrimary = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xFFB8B3CC);
+  static const textPrimary = Color(0xFF17324D);
+  static const textSecondary = Color(0xFF6B7C8F);
 }
 
 ThemeData buildBrainTheme() {
-  final scheme = const ColorScheme.dark(
+  final scheme = const ColorScheme.light(
     primary: BrainColors.electricViolet,
-    onPrimary: BrainColors.textPrimary,
-    secondary: BrainColors.gold,
-    onSecondary: Color(0xFF1E1B2E),
-    tertiary: BrainColors.turquoise,
+    onPrimary: Colors.white,
+    secondary: BrainColors.turquoise,
+    onSecondary: Colors.white,
+    tertiary: BrainColors.gold,
     error: BrainColors.coral,
     surface: BrainColors.surface,
     onSurface: BrainColors.textPrimary,
@@ -79,6 +86,7 @@ ThemeData buildBrainTheme() {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
+      iconTheme: IconThemeData(color: BrainColors.textPrimary),
       titleTextStyle: TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.w800,
@@ -87,6 +95,8 @@ ThemeData buildBrainTheme() {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
+        backgroundColor: BrainColors.electricViolet,
+        foregroundColor: Colors.white,
         minimumSize: const Size.fromHeight(BrainSpacing.xxl + 8),
         textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         shape: RoundedRectangleBorder(
@@ -96,6 +106,7 @@ ThemeData buildBrainTheme() {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
+        foregroundColor: BrainColors.electricVioletDeep,
         minimumSize: const Size.fromHeight(BrainSpacing.xxl),
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         side: const BorderSide(color: BrainColors.outline, width: 1.5),
@@ -106,15 +117,25 @@ ThemeData buildBrainTheme() {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
+        foregroundColor: BrainColors.electricVioletDeep,
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(BrainRadius.sm),
         ),
       ),
     ),
+    navigationBarTheme: const NavigationBarThemeData(
+      backgroundColor: BrainColors.surface,
+      elevation: 3,
+      indicatorColor: Color(0x1A3B82F6),
+      labelTextStyle: WidgetStatePropertyAll(
+        TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+      ),
+    ),
     cardTheme: CardThemeData(
       color: BrainColors.surface,
-      elevation: 0,
+      elevation: 2,
+      shadowColor: const Color(0x1A17324D),
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(BrainRadius.lg),
@@ -162,15 +183,15 @@ ThemeData buildBrainTheme() {
       space: BrainSpacing.md,
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: BrainColors.surfaceHigh,
-      contentTextStyle: const TextStyle(color: BrainColors.textPrimary),
+      backgroundColor: BrainColors.textPrimary,
+      contentTextStyle: const TextStyle(color: Colors.white),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(BrainRadius.md),
       ),
       behavior: SnackBarBehavior.floating,
     ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
-      color: BrainColors.gold,
+      color: BrainColors.turquoise,
     ),
   );
 }

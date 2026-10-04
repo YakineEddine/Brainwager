@@ -112,14 +112,14 @@ class BrainSubmissionStatus extends StatelessWidget {
       badge = _StatusChip(
         key: const ValueKey('saved'),
         icon: Icons.check_circle,
-        color: BrainColors.turquoise,
+        color: BrainColors.tealDeep,
         label: savedLabel,
       );
     } else if (edited) {
       badge = _StatusChip(
         key: const ValueKey('edited'),
         icon: Icons.edit,
-        color: BrainColors.gold,
+        color: BrainColors.goldDeep,
         label: editedLabel,
       );
     } else {

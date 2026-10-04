@@ -1,5 +1,6 @@
-// Fond d'écran premium Brainwager : dégradé sombre + halos violets/or.
-// RTL-safe (halos positionnés en relatif, jamais de gauche/droite durs).
+// Fond d'écran clair Brainwager : dégradé blanc→cloud + halos doux
+// teal/cobalt (atmosphère, jamais de halos violets néon).
+// RTL-safe (positionnement directionnel, jamais de gauche/droite durs).
 // Utilisé par tous les écrans via BrainScaffold.
 import 'package:flutter/material.dart';
 
@@ -28,8 +29,8 @@ class BrainBackground extends StatelessWidget {
             start: -50,
             child: const _Halo(
               size: 220,
-              color: BrainColors.electricViolet,
-              opacity: 0.28,
+              color: BrainColors.turquoise,
+              opacity: 0.12,
             ),
           ),
           Positioned.directional(
@@ -38,8 +39,8 @@ class BrainBackground extends StatelessWidget {
             end: -60,
             child: const _Halo(
               size: 260,
-              color: BrainColors.electricVioletDeep,
-              opacity: 0.35,
+              color: BrainColors.electricViolet,
+              opacity: 0.1,
             ),
           ),
           Positioned.fill(child: child),

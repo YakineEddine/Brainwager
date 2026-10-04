@@ -396,4 +396,34 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get shopCanceled => 'تم إلغاء الشراء';
+
+  @override
+  String get navHome => 'الرئيسية';
+
+  @override
+  String get navPacks => 'الحزم';
+
+  @override
+  String get navShop => 'المتجر';
+
+  @override
+  String get navProfile => 'الملف الشخصي';
+
+  @override
+  String get profileTitle => 'الملف الشخصي';
+
+  @override
+  String get profileGuest => 'ضيف';
+
+  @override
+  String get profileAnonymous => 'مسجل الدخول كضيف';
+
+  @override
+  String get profileDisplayName => 'الاسم المعروض';
+
+  @override
+  String get profileLocale => 'اللغة';
+
+  @override
+  String get profileComingSoon => 'خيارات حساب إضافية قريبًا';
 }

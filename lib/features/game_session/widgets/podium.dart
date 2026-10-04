@@ -103,7 +103,9 @@ class BrainPodium extends StatelessWidget {
         children: [
           Text(
             '#${ranks[i]}',
-            style: textTheme.displaySmall?.copyWith(color: BrainColors.gold),
+            style: textTheme.displaySmall?.copyWith(
+              color: BrainColors.goldDeep,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -130,7 +132,9 @@ class BrainPodium extends StatelessWidget {
         children: [
           Text(
             '#${ranks[i]}',
-            style: textTheme.headlineSmall?.copyWith(color: BrainColors.gold),
+            style: textTheme.headlineSmall?.copyWith(
+              color: BrainColors.goldDeep,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -167,7 +171,9 @@ class BrainPodium extends StatelessWidget {
             ),
             child: Text(
               '#${ranks[i]}',
-              style: textTheme.titleMedium?.copyWith(color: BrainColors.gold),
+              style: textTheme.titleMedium?.copyWith(
+                color: BrainColors.goldDeep,
+              ),
             ),
           ),
           const SizedBox(width: BrainSpacing.md),
