@@ -1,7 +1,7 @@
 name: brainwager
 description: "Brainwager — Bet on what you know / Parie sur ce que tu sais. Party trivia game multijoueur festif, 100% original."
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.1.0+2
 
 environment:
   sdk: ^3.13.3
