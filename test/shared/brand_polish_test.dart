@@ -11,8 +11,11 @@ import 'package:brainwager/features/packs/pack_import_screen.dart';
 import 'package:brainwager/features/packs/pack_providers.dart';
 import 'package:brainwager/features/packs/pack_screens.dart';
 import 'package:brainwager/features/packs/report_pack_dialog.dart';
+import 'package:brainwager/app/theme.dart' show BrainColors;
 import 'package:brainwager/l10n/app_localizations.dart';
+import 'package:brainwager/shared/widgets/brain_card.dart';
 import 'package:brainwager/shared/widgets/brand.dart';
+import 'package:brainwager/shared/widgets/entrance.dart';
 
 const _premium = PackSummary(
   id: 'prem1',
@@ -197,5 +200,126 @@ void main() {
       ),
     );
     expect(find.text('BRAINWAGER'), findsOneWidget);
+  });
+
+  Future<void> pumpHomeNarrow(
+    WidgetTester tester, {
+    Locale locale = const Locale('en'),
+    double textScale = 1.0,
+  }) async {
+    tester.view.physicalSize = const Size(320, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.platformDispatcher.textScaleFactorTestValue = textScale;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(
+          locale: locale,
+          routerConfig: brainRouter,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('en'), Locale('fr'), Locale('ar')],
+        ),
+      ),
+    );
+    brainRouter.go('/home');
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('R1) Home 320px EN : pas de overflow', (tester) async {
+    await pumpHomeNarrow(tester);
+    expect(find.text('Create game'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('R2) Home 320px FR : Boutique visible, pas de overflow', (
+    tester,
+  ) async {
+    await pumpHomeNarrow(tester, locale: const Locale('fr'));
+    expect(find.text('Boutique'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('R3) Home 320px AR RTL : secondaires visibles', (tester) async {
+    await pumpHomeNarrow(tester, locale: const Locale('ar'));
+    expect(find.text('الحزم'), findsOneWidget);
+    expect(find.text('المتجر'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('R4) Home 320px + texte 1.3x : pas de overflow', (tester) async {
+    await pumpHomeNarrow(tester, textScale: 1.3);
+    expect(find.text('Create game'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('T1) entrée delay=0 anime immédiatement', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: BrainEntrance(delayMs: 0, child: Text('Hi'))),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    final opacity = tester.widget<Opacity>(find.byType(Opacity)).opacity;
+    expect(opacity, greaterThan(0));
+  });
+
+  testWidgets('T2/T3) entrée retardée : cachée avant, visible après', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: BrainEntrance(delayMs: 300, child: Text('Hi'))),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 299));
+    expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 0);
+    await tester.pump(const Duration(milliseconds: 281));
+    expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 1);
+  });
+
+  testWidgets('T4) disableAnimations : rendu immédiat', (tester) async {
+    await tester.pumpWidget(
+      const MediaQuery(
+        data: MediaQueryData(disableAnimations: true),
+        child: MaterialApp(
+          home: Scaffold(body: BrainEntrance(delayMs: 300, child: Text('Hi'))),
+        ),
+      ),
+    );
+    expect(find.text('Hi'), findsOneWidget);
+    expect(find.byType(Opacity), findsNothing);
+  });
+
+  testWidgets('C1) BrainCard : ripple interne, tap, featured', (tester) async {
+    var tapped = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BrainCard(
+            featured: true,
+            onTap: () => tapped++,
+            child: const Text('X'),
+          ),
+        ),
+      ),
+    );
+    expect(find.byType(Card), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(Card), matching: find.byType(InkWell)),
+      findsOneWidget,
+    );
+    final shape =
+        tester.widget<Card>(find.byType(Card)).shape as RoundedRectangleBorder;
+    expect(shape.side.color, BrainColors.gold.withValues(alpha: 0.65));
+    await tester.tap(find.text('X'));
+    await tester.pump();
+    expect(tapped, 1);
   });
 }

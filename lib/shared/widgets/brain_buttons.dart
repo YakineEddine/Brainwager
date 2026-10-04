@@ -61,7 +61,68 @@ class BrainGhostButton extends StatelessWidget {
   }
 }
 
-/// Grand bouton menu (Home) : carte cliquable avec icône + libellé.
+/// Carte menu compacte (secondaire, demi-largeur) : icône au-dessus du
+/// libellé, centrée, titre sur 2 lignes max. Hauteurs égales obtenues par
+/// la Row parente (crossAxisAlignment.stretch). 48dp+ garanti, RTL-safe.
+class BrainCompactMenuCard extends StatelessWidget {
+  final VoidCallback? onTap;
+  final IconData icon;
+  final String title;
+  final Color iconColor;
+  const BrainCompactMenuCard({
+    super.key,
+    required this.onTap,
+    required this.icon,
+    required this.title,
+    required this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(BrainRadius.lg),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: BrainSpacing.sm,
+            vertical: BrainSpacing.md,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 88),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(BrainRadius.md),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 24),
+                ),
+                const SizedBox(height: BrainSpacing.sm),
+                Text(
+                  title,
+                  style: textTheme.titleSmall,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Grand bouton menu (Home, pleine largeur) : carte cliquable avec
+/// icône + libellé + chevron. Conçu pour la pleine largeur uniquement ;
+/// en demi-largeur, préférer BrainCompactMenuCard.
 class BrainMenuCard extends StatelessWidget {
   final VoidCallback? onTap;
   final IconData icon;

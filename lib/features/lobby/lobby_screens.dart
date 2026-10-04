@@ -59,32 +59,37 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           // Actions secondaires : Packs / Boutique en duo compact.
-          Row(
-            children: [
-              Expanded(
-                child: BrainEntrance(
-                  delayMs: 140,
-                  child: BrainMenuCard(
-                    onTap: () => context.go('/packs'),
-                    icon: Icons.style,
-                    iconColor: BrainColors.gold,
-                    title: l10n.packs,
+          // Hauteurs égales (IntrinsicHeight borne la Row, stretch
+          // égalise les cartes) — jamais de hauteur infinie en scroll.
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: BrainEntrance(
+                    delayMs: 140,
+                    child: BrainCompactMenuCard(
+                      onTap: () => context.go('/packs'),
+                      icon: Icons.style,
+                      iconColor: BrainColors.gold,
+                      title: l10n.packs,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: BrainEntrance(
-                  delayMs: 210,
-                  child: BrainMenuCard(
-                    onTap: () => context.go('/shop'),
-                    icon: Icons.shopping_bag,
-                    iconColor: BrainColors.coral,
-                    title: l10n.shop,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: BrainEntrance(
+                    delayMs: 210,
+                    child: BrainCompactMenuCard(
+                      onTap: () => context.go('/shop'),
+                      icon: Icons.shopping_bag,
+                      iconColor: BrainColors.coral,
+                      title: l10n.shop,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

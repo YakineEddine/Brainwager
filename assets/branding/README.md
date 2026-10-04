@@ -10,9 +10,16 @@ Ce dossier accueillera les assets finaux (fournis séparément) :
 
 Règles :
 - ne PAS commiter de faux visuels raster en attendant ;
-- `BrainBrand` (`lib/shared/widgets/brand.dart`) affiche automatiquement
-  l'asset dès qu'il existe, sinon un wordmark texte de repli ;
-- quand les PNG finaux arrivent : les déposer ici, déclarer le dossier
-  dans `pubspec.yaml` (`flutter/assets`), et vérifier FR/EN/AR + RTL.
+- `BrainBrand` (`lib/shared/widgets/brand.dart`) affiche aujourd'hui
+  TOUJOURS le wordmark de repli : `_brandAssetFor()` retourne
+  volontairement null tant que l'artwork n'est pas approuvé ;
+- déposer des PNG ici seuls ne suffit PAS à les activer (aucune magie).
+
+Après approbation de l'artwork final, activer en 4 étapes :
+1. déposer les PNG listés ci-dessus dans `assets/branding/` ;
+2. déclarer `assets/branding/` dans `pubspec.yaml` (`flutter/assets`) ;
+3. mapper chaque `BrainBrandVariant` vers son chemin dans
+   `_brandAssetFor()` (`lib/shared/widgets/brand.dart`) ;
+4. vérifier le repli (`errorBuilder`) et FR/EN/AR + RTL.
 
 Voir `docs/09-brand-and-polish.md` (splash, icône, direction de marque).

@@ -23,25 +23,30 @@ class BrainCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final card = Card(
-      shape: RoundedRectangleBorder(
+    final content = Padding(padding: padding, child: child);
+    final tap = onTap;
+    // Splash d'encre AU-DESSUS du fond Card : InkWell à l'intérieur de la
+    // Card (pas l'inverse), sans Material opaque imbriqué superflu.
+    if (tap == null) return Card(shape: _shape(featured), child: content);
+    return Card(
+      shape: _shape(featured),
+      child: InkWell(
+        onTap: tap,
         borderRadius: BorderRadius.circular(BrainRadius.lg),
-        side: BorderSide(
-          color: featured
-              ? BrainColors.gold.withValues(alpha: 0.65)
-              : BrainColors.outline,
-          width: featured ? 1.5 : 1,
-        ),
+        child: content,
       ),
-      child: Padding(padding: padding, child: child),
-    );
-    if (onTap == null) return card;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(BrainRadius.lg),
-      child: card,
     );
   }
+
+  ShapeBorder _shape(bool featured) => RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(BrainRadius.lg),
+    side: BorderSide(
+      color: featured
+          ? BrainColors.gold.withValues(alpha: 0.65)
+          : BrainColors.outline,
+      width: featured ? 1.5 : 1,
+    ),
+  );
 }
 
 /// Panneau hero : surface haute + bordure or subtile, pour codes/CTA.
