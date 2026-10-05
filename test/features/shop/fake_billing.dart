@@ -48,6 +48,9 @@ class FakeBillingGateway implements BillingGateway {
   String? lastRestoreAccount;
   int completeCalls = 0;
   PurchaseDetails? lastCompleted;
+
+  /// Requêtes produits observées (croissance d'union en test).
+  final List<Set<String>> queriedIds = [];
   bool available = true;
   Map<String, ProductDetails> products = {};
   Set<String> notFound = {};
@@ -66,6 +69,7 @@ class FakeBillingGateway implements BillingGateway {
 
   @override
   Future<ProductDetailsResponse> queryProducts(Set<String> ids) async {
+    queriedIds.add(Set<String>.of(ids));
     final found = <ProductDetails>[];
     final missing = <String>[];
     for (final id in ids) {

@@ -429,4 +429,7 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get profileComingSoon =>
       'Plus d\'options de compte bientôt disponibles';
+
+  @override
+  String get profileAvatar => 'Avatar';
 }

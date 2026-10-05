@@ -135,5 +135,6 @@
   "profileAnonymous": "Connecté anonymement",
   "profileDisplayName": "Pseudo affiché",
   "profileLocale": "Langue",
-  "profileComingSoon": "Plus d'options de compte bientôt disponibles"
+  "profileComingSoon": "Plus d'options de compte bientôt disponibles",
+  "profileAvatar": "Avatar"
 }

@@ -135,5 +135,6 @@
   "profileAnonymous": "مسجل الدخول كضيف",
   "profileDisplayName": "الاسم المعروض",
   "profileLocale": "اللغة",
-  "profileComingSoon": "خيارات حساب إضافية قريبًا"
+  "profileComingSoon": "خيارات حساب إضافية قريبًا",
+  "profileAvatar": "الصورة الرمزية"
 }

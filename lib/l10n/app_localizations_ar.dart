@@ -426,4 +426,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get profileComingSoon => 'خيارات حساب إضافية قريبًا';
+
+  @override
+  String get profileAvatar => 'الصورة الرمزية';
 }

@@ -64,11 +64,11 @@ class ProfileScreen extends ConsumerWidget {
                     border: Border.all(color: BrainColors.outline, width: 1.5),
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(
+                  child: Icon(
                     Icons.person,
                     size: 34,
                     color: BrainColors.textSecondary,
-                    semanticLabel: 'avatar',
+                    semanticLabel: l10n.profileAvatar,
                   ),
                 ),
                 const SizedBox(width: 16),

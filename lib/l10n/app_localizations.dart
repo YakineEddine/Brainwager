@@ -915,6 +915,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'More account options coming soon'**
   String get profileComingSoon;
+
+  /// No description provided for @profileAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar'**
+  String get profileAvatar;
 }
 
 class _AppLocalizationsDelegate

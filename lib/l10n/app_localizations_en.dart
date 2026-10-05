@@ -426,4 +426,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileComingSoon => 'More account options coming soon';
+
+  @override
+  String get profileAvatar => 'Avatar';
 }

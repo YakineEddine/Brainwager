@@ -50,30 +50,46 @@ class ShopScreen extends ConsumerStatefulWidget {
 }
 
 class _ShopScreenState extends ConsumerState<ShopScreen> {
-  /// IDs déjà demandés au billing (union croissante). L'init ne démarre
-  /// qu'une fois puis seulement si de nouveaux SKU apparaissent :
+  /// IDs déjà demandés au billing (union croissante). L'init démarre une
+  /// fois, puis un SEUL suivi si l'union grandit pendant un vol :
   /// jamais de relance à chaque rebuild (Refresh manuel = retry explicite).
   final Set<String> _requestedIds = {};
   bool _initStarted = false;
   bool _initInFlight = false;
+  bool _followUpPending = false;
 
   void _ensureBilling(Set<String> ids) {
     final before = _requestedIds.length;
     _requestedIds.addAll(ids);
-    final grew = _requestedIds.length > before;
-    if (_initInFlight) return;
-    if (_initStarted && !grew) return;
+    if (_initInFlight) {
+      // Croissance pendant le vol : un seul suivi avec l'union complète
+      // après la fin du vol en cours (pas de spin sur les rebuilds).
+      if (_requestedIds.length > before) _followUpPending = true;
+      return;
+    }
+    if (_initStarted && _requestedIds.length == before) return;
+    _runInit();
+  }
+
+  void _runInit() {
     _initStarted = true;
     _initInFlight = true;
     final wanted = Set<String>.of(_requestedIds);
     Future.microtask(() async {
-      if (!mounted) {
-        return;
+      try {
+        if (!mounted) return;
+        await ref
+            .read(billingControllerProvider.notifier)
+            .ensureInitialized(productIds: wanted);
+      } finally {
+        // Toujours refermé, même si ensureInitialized levait.
+        // (Les rebuilds UI viennent de l'état du contrôleur lui-même.)
+        _initInFlight = false;
+        final followUp = _followUpPending;
+        _followUpPending = false;
+        // Un seul suivi si l'union a grandi pendant le vol.
+        if (followUp && mounted) _runInit();
       }
-      await ref
-          .read(billingControllerProvider.notifier)
-          .ensureInitialized(productIds: wanted);
-      if (mounted) setState(() => _initInFlight = false);
     });
   }
 
