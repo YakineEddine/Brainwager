@@ -67,8 +67,9 @@ class BrainAvatarView extends StatelessWidget {
   /// Surcharge visuelle locale (ex. choix en cours) ; null => flag serveur.
   final bool? selected;
 
-  /// Libellé d'accessibilité localisé ; null => clé brute (éviter : les
-  /// appelants passent `avatarNameFor`).
+  /// Libellé d'accessibilité localisé explicite (prioritaire).
+  /// Omission sûre : dérivé localisé via `avatarNameFor` (jamais la clé
+  /// brute, jamais une clé future inconnue en clair).
   final String? semanticLabel;
   final double size;
   final bool selectable;
@@ -87,8 +88,13 @@ class BrainAvatarView extends StatelessWidget {
   Widget build(BuildContext context) {
     final isSelected = selected ?? avatar.selected;
     final interactive = selectable && avatar.unlocked && onSelect != null;
+    // Sûr par construction : explicite si fourni, sinon nom localisé
+    // (clé inconnue => générique). Jamais la clé brute de la base.
+    final label =
+        semanticLabel ??
+        avatarNameFor(avatar.avatarKey, AppLocalizations.of(context)!);
     return Semantics(
-      label: semanticLabel ?? avatar.avatarKey,
+      label: label,
       selected: isSelected,
       enabled: interactive,
       button: true,

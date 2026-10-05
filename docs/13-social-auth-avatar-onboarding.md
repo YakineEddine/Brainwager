@@ -116,3 +116,19 @@ Aucun secret OAuth dans Flutter, aucun `google_sign_in` /
   repli générique, jamais la clé brute).
 - Erreurs séparées : `profile-load-error` → `profileLoadError`,
   `profile-save-error` → `profileSaveError` (inconnus classés par chemin).
+
+## 12. Fermeture des états périmés (même ticket, troisième commit)
+
+- Sign-out : fail-closed immédiat (profil/avatars/providers/erreurs
+  effacés, gate fermée), AUCUN rpc sans utilisateur ; jamais un succès
+  OAuth. Le reload attend le prochain signedIn/userUpdated.
+- Recharges en file drainée pilotée par events : un vol, puis UN suivi
+  seulement sur demande externe (aucun `while(true)` auto-entretenu).
+  Profil chargé d'un autre id que la session => données invalides :
+  jetées, `profile-load-error`, sans retry.
+- Save identity-safe : installation seulement si UID inchangé et
+  `saved.id` conforme ; sinon jeté (sans erreur parasite), reload
+  autoritaire, `false`. Refresh avatars post-save gardé de même.
+- `BrainAvatarView` sûr par défaut : sans `semanticLabel` explicite, le
+  libellé est dérivé localisé (`avatarNameFor`), jamais la clé brute.
+- Annulation d'édition : restaure pseudo/avatar serveur, sans RPC.

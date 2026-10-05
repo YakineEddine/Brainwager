@@ -323,8 +323,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const SizedBox(height: 8),
                   BrainGhostButton(
                     onPressed: () => setState(() {
+                      // Annulation : restaure les valeurs serveur
+                      // (aucun RPC), sans garder la frappe/avatar non sauvés.
                       _editing = false;
                       _touched = false;
+                      _name.text = profile.displayName;
+                      _avatarKey = profile.avatarKey;
                     }),
                     child: Text(l10n.back),
                   ),
