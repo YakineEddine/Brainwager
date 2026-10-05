@@ -159,5 +159,13 @@
   "accountConnected": "Connected account",
   "editProfile": "Edit profile",
   "connectedWith": "Connected with {provider}",
-  "retry": "Retry"
+  "retry": "Retry",
+  "avatarBrain": "Brain",
+  "avatarRocket": "Rocket",
+  "avatarStar": "Star",
+  "avatarLightning": "Lightning",
+  "avatarPlanet": "Planet",
+  "avatarTrophy": "Trophy",
+  "avatarFootball": "Football",
+  "avatarBasketball": "Basketball"
 }

@@ -1,5 +1,6 @@
 // Erreurs profil conviviales FR/EN/AR (codes, jamais de brut).
 // L'appelant transmet la langue UI via AppLocalizations.
+// Charge vs sauvegarde séparées : jamais de fuite brute.
 import '../../l10n/app_localizations.dart';
 
 String friendlyProfileError(
@@ -16,7 +17,10 @@ String friendlyProfileError(
       return l10n.oauthUnavailable;
     case 'profile-not-found':
     case 'not-authenticated':
+    case 'profile-load-error':
       return l10n.profileLoadError;
+    case 'profile-save-error':
+      return l10n.profileSaveError;
     default:
       return fallback ?? l10n.profileSaveError;
   }

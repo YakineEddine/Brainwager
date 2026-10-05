@@ -1,6 +1,9 @@
 // Contrôleur profil/onboarding (Riverpod, sans code-gen).
 // Autorité = RPC 0014 + Supabase Auth. Fakes injectables en tests.
 // Un seul abonnement onAuthStateChange ; dispose sûr ; jamais de poll.
+// Recharges sérialisées par génération : un vol à la fois, l'event auth
+// invalide les vols périmés, un seul suivi en attente, résultats périmés
+// jetés, changement de compte => fail-closed immédiat.
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +21,8 @@ final socialAuthGatewayProvider = Provider<SocialAuthGateway>(
 );
 
 class ProfileUiState {
+  /// Vrai jusqu'à la première détermination (fail-closed : la gate
+  /// n'expose jamais le contenu avant).
   final bool profileLoading;
   final BrainProfile? profile;
   final String? profileError;
@@ -28,6 +33,9 @@ class ProfileUiState {
   final bool oauthPending;
   final String? oauthError;
   final List<String> providers;
+
+  /// État compte autoritaire (gateway), rafraîchi aux events auth/reloads.
+  final bool isAnonymous;
   const ProfileUiState({
     this.profileLoading = false,
     this.profile,
@@ -39,6 +47,7 @@ class ProfileUiState {
     this.oauthPending = false,
     this.oauthError,
     this.providers = const [],
+    this.isAnonymous = true,
   });
 
   /// Gate : profil chargé ET onboarding terminé.
@@ -55,6 +64,7 @@ class ProfileUiState {
     bool? oauthPending,
     String? Function()? oauthError,
     List<String>? providers,
+    bool? isAnonymous,
   }) {
     return ProfileUiState(
       profileLoading: profileLoading ?? this.profileLoading,
@@ -67,6 +77,7 @@ class ProfileUiState {
       oauthPending: oauthPending ?? this.oauthPending,
       oauthError: oauthError == null ? this.oauthError : oauthError(),
       providers: providers ?? this.providers,
+      isAnonymous: isAnonymous ?? this.isAnonymous,
     );
   }
 }
@@ -74,7 +85,12 @@ class ProfileUiState {
 class ProfileController extends Notifier<ProfileUiState> {
   StreamSubscription<AuthEvent>? _sub;
   bool _started = false;
-  bool _loading = false;
+
+  /// Sérialisation : un seul vol réseau à la fois, génération monotone,
+  /// un seul suivi en attente. Jamais de `_loading = false` forcé.
+  bool _flight = false;
+  bool _reloadPending = false;
+  int _generation = 0;
 
   @override
   ProfileUiState build() {
@@ -95,46 +111,156 @@ class ProfileController extends Notifier<ProfileUiState> {
     _started = true;
     try {
       _sub = _auth.authStateChanges.listen(
-        (_) => reloadFromAuthEvent(),
+        (e) => reloadFromAuthEvent(e),
         onError: (_) {},
       );
     } catch (_) {}
     await reloadAll();
   }
 
-  /// Recharge profil + avatars + providers (après event auth / retry).
-  Future<void> reloadAll() async {
-    if (_loading) return;
-    _loading = true;
-    state = state.copyWith(profileLoading: true, profileError: () => null);
+  /// Recharge profil + avatars + providers (retry manuel / démarrage).
+  /// Sérialisée : si un vol est en cours, marque un suivi et revient.
+  Future<void> reloadAll() => _enqueueReload();
+
+  /// Event auth pertinent (SIGNED_IN / USER_UPDATED / identité / sign-out) :
+  /// recharge autoritative. Token refresh / session initiale : ignorés
+  /// (pas de reload inutile). Jamais de poll, jamais de double abonnement.
+  Future<void> reloadFromAuthEvent(AuthEvent event) async {
+    if (!event.shouldReload) return;
+    state = state.copyWith(oauthPending: false);
+    _failClosedOnAccountSwitch();
+    await _enqueueReload();
+  }
+
+  /// Changement de compte : l'ancien profil ne doit jamais s'afficher
+  /// sous la nouvelle session. Efface tout et referme la gate.
+  /// Link (UUID inchangé) => simple refresh autoritaire, sans clear.
+  void _failClosedOnAccountSwitch() {
+    String? currentId;
+    bool anon = true;
     try {
-      final results = await Future.wait([
-        _repo.loadProfile(),
-        _repo.loadAvatars(),
-        _auth.connectedProviders(),
-      ]);
+      currentId = _auth.currentUserId;
+      anon = _auth.isAnonymous;
+    } catch (_) {}
+    state = state.copyWith(isAnonymous: anon);
+    final oldId = state.profile?.id;
+    if (currentId != null &&
+        oldId != null &&
+        oldId.isNotEmpty &&
+        currentId != oldId) {
+      _generation++;
       state = state.copyWith(
-        profileLoading: false,
-        profile: () => results[0] as BrainProfile,
-        avatars: results[1] as List<BrainAvatar>,
-        providers: (results[2] as List<String>),
+        profileLoading: true,
+        profile: () => null,
+        avatars: const [],
+        providers: const [],
+        profileError: () => null,
+        saveError: () => null,
       );
-    } catch (e) {
-      state = state.copyWith(
-        profileLoading: false,
-        profileError: () => _codeOf(e),
-      );
-    } finally {
-      _loading = false;
     }
   }
 
-  /// Event auth (SIGNED_IN / USER_UPDATED / identité) : recharge
-  /// autoritative. Jamais de poll, jamais de double abonnement.
-  Future<void> reloadFromAuthEvent() async {
-    _loading = false;
-    state = state.copyWith(oauthPending: false);
-    await reloadAll();
+  Future<void> _enqueueReload() async {
+    if (_flight) {
+      // Un vol est en cours : l'invalider et prévoir UN suivi unique.
+      _generation++;
+      _reloadPending = true;
+      return;
+    }
+    _flight = true;
+    try {
+      // Boucle bornée : chaque tour consomme le suivi en attente.
+      // ignore: literal_only_boolean_expressions
+      while (true) {
+        _reloadPending = false;
+        final gen = ++_generation;
+        String? uidAtStart;
+        bool anonAtStart = true;
+        try {
+          uidAtStart = _auth.currentUserId;
+          anonAtStart = _auth.isAnonymous;
+        } catch (_) {}
+        // Re-vérifie le switch au démarrage du vol (fail-closed).
+        final oldId = state.profile?.id;
+        if (uidAtStart != null &&
+            oldId != null &&
+            oldId.isNotEmpty &&
+            uidAtStart != oldId) {
+          state = state.copyWith(
+            profileLoading: true,
+            profile: () => null,
+            avatars: const [],
+            providers: const [],
+            profileError: () => null,
+            saveError: () => null,
+            isAnonymous: anonAtStart,
+          );
+        } else {
+          state = state.copyWith(
+            profileLoading: true,
+            profileError: () => null,
+            isAnonymous: anonAtStart,
+          );
+        }
+        Object? error;
+        BrainProfile? loadedProfile;
+        List<BrainAvatar>? loadedAvatars;
+        List<String>? loadedProviders;
+        try {
+          final results = await Future.wait([
+            _repo.loadProfile(),
+            _repo.loadAvatars(),
+            _auth.connectedProviders(),
+          ]);
+          loadedProfile = results[0] as BrainProfile;
+          loadedAvatars = results[1] as List<BrainAvatar>;
+          loadedProviders = (results[2] as List<String>);
+        } catch (e) {
+          error = e;
+        }
+        // Vol périmé (event plus récent) : résultats jetés.
+        if (gen != _generation) {
+          if (_reloadPending) continue;
+          return;
+        }
+        // Utilisateur changé pendant le vol : jeter, refaire un tour.
+        String? uidNow;
+        bool anonNow = true;
+        try {
+          uidNow = _auth.currentUserId;
+          anonNow = _auth.isAnonymous;
+        } catch (_) {}
+        if (uidAtStart != uidNow) {
+          _reloadPending = true;
+          continue;
+        }
+        if (error != null) {
+          state = state.copyWith(
+            profileLoading: false,
+            profileError: () => _loadCodeOf(error!),
+            isAnonymous: anonNow,
+          );
+        } else {
+          final p = loadedProfile!;
+          // Garde-fou : le profil chargé doit appartenir à la session.
+          if (uidNow != null && p.id.isNotEmpty && p.id != uidNow) {
+            _reloadPending = true;
+            continue;
+          }
+          state = state.copyWith(
+            profileLoading: false,
+            profile: () => p,
+            avatars: loadedAvatars ?? const [],
+            providers: loadedProviders ?? const [],
+            isAnonymous: anonNow,
+          );
+        }
+        if (_reloadPending) continue;
+        return;
+      }
+    } finally {
+      _flight = false;
+    }
   }
 
   /// Sauvegarde via update_my_profile UNIQUEMENT (jamais optimiste).
@@ -159,7 +285,7 @@ class ProfileController extends Notifier<ProfileUiState> {
       unawaitedReloadAvatars();
       return true;
     } catch (e) {
-      state = state.copyWith(saving: false, saveError: () => _codeOf(e));
+      state = state.copyWith(saving: false, saveError: () => _saveCodeOf(e));
       return false;
     }
   }
@@ -206,7 +332,7 @@ class ProfileController extends Notifier<ProfileUiState> {
     // Sinon : en attente de l'event auth (reloadFromAuthEvent).
   }
 
-  String _codeOf(Object e) {
+  String _loadCodeOf(Object e) {
     final text = '$e';
     const known = {
       'not-authenticated',
@@ -219,6 +345,21 @@ class ProfileController extends Notifier<ProfileUiState> {
       if (known.contains(token.group(0))) return token.group(0)!;
     }
     return 'profile-load-error';
+  }
+
+  String _saveCodeOf(Object e) {
+    final text = '$e';
+    const known = {
+      'not-authenticated',
+      'profile-not-found',
+      'invalid-display-name',
+      'invalid-locale',
+      'avatar-locked-or-invalid',
+    };
+    for (final token in RegExp(r'[a-z]+(?:-[a-z]+)+').allMatches(text)) {
+      if (known.contains(token.group(0))) return token.group(0)!;
+    }
+    return 'profile-save-error';
   }
 }
 

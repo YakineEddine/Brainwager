@@ -2,6 +2,9 @@
 // Design clair (shell). Une seule sauvegarde via update_my_profile
 // (invité ou lié) ; la gate s'ouvre sur onboarding_complete serveur.
 // La localisation router est préservée (la gate remasque l'enfant).
+// Account-aware : après link (non-anonyme), le CTA invité et les
+// contrôles guest-only disparaissent (état contrôleur, jamais supa()
+// direct). Sélection avatar immédiate via selectedKey local.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -74,6 +77,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         .toList(growable: false);
     final selected =
         _avatarKey ?? (unlocked.isNotEmpty ? unlocked.first.avatarKey : null);
+    // État compte autoritaire (contrôleur) : après link, l'utilisateur
+    // n'est plus anonyme => plus de CTA invité ni de contrôles guest-only.
+    final anonymous = state.isAnonymous;
 
     return BrainScaffold(
       body: ListView(
@@ -115,6 +121,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 else
                   BrainAvatarChooser(
                     avatars: state.avatars,
+                    selectedKey: selected,
+                    semanticLabelFor: (k) => avatarNameFor(k, l10n),
                     onSelect: (key) => setState(() => _avatarKey = key),
                   ),
               ],
@@ -129,7 +137,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     avatarKey: selected ?? '',
                     locale: lang,
                   ),
-            child: Text(state.saving ? l10n.oauthPending : l10n.continueGuest),
+            child: Text(
+              state.saving
+                  ? l10n.oauthPending
+                  : anonymous
+                  ? l10n.continueGuest
+                  : l10n.saveProfile,
+            ),
           ),
           if (state.saveError != null)
             Padding(
@@ -140,59 +154,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 textAlign: TextAlign.center,
               ),
             ),
-          const SizedBox(height: 16),
-          BrainCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SectionHeader(title: l10n.secureAccount),
-                BrainSecondaryButton(
-                  expanded: true,
-                  onPressed: state.oauthPending
-                      ? null
-                      : () => controller.secureWithGoogle(),
-                  child: Text(l10n.continueGoogle),
-                ),
-                const SizedBox(height: 8),
-                BrainSecondaryButton(
-                  expanded: true,
-                  onPressed: state.oauthPending
-                      ? null
-                      : () => controller.secureWithFacebook(),
-                  child: Text(l10n.continueFacebook),
-                ),
-                if (state.oauthPending)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(l10n.oauthPending, textAlign: TextAlign.center),
-                  ),
-                if (state.oauthError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      friendlyProfileError(state.oauthError!, l10n),
-                      style: const TextStyle(color: BrainColors.coral),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                const SizedBox(height: 8),
-                BrainGhostButton(
-                  onPressed: () =>
-                      setState(() => _showExisting = !_showExisting),
-                  child: Text(l10n.alreadyHaveAccount),
-                ),
-                if (_showExisting) ...[
-                  Text(
-                    l10n.existingAccountWarning,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
+          if (anonymous) ...[
+            const SizedBox(height: 16),
+            BrainCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SectionHeader(title: l10n.secureAccount),
                   BrainSecondaryButton(
                     expanded: true,
                     onPressed: state.oauthPending
                         ? null
-                        : () => controller.signInExistingGoogle(),
+                        : () => controller.secureWithGoogle(),
                     child: Text(l10n.continueGoogle),
                   ),
                   const SizedBox(height: 8),
@@ -200,13 +173,78 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     expanded: true,
                     onPressed: state.oauthPending
                         ? null
-                        : () => controller.signInExistingFacebook(),
+                        : () => controller.secureWithFacebook(),
                     child: Text(l10n.continueFacebook),
                   ),
+                  if (state.oauthPending)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        l10n.oauthPending,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  if (state.oauthError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        friendlyProfileError(state.oauthError!, l10n),
+                        style: const TextStyle(color: BrainColors.coral),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  BrainGhostButton(
+                    onPressed: () =>
+                        setState(() => _showExisting = !_showExisting),
+                    child: Text(l10n.alreadyHaveAccount),
+                  ),
+                  if (_showExisting) ...[
+                    Text(
+                      l10n.existingAccountWarning,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    BrainSecondaryButton(
+                      expanded: true,
+                      onPressed: state.oauthPending
+                          ? null
+                          : () => controller.signInExistingGoogle(),
+                      child: Text(l10n.continueGoogle),
+                    ),
+                    const SizedBox(height: 8),
+                    BrainSecondaryButton(
+                      expanded: true,
+                      onPressed: state.oauthPending
+                          ? null
+                          : () => controller.signInExistingFacebook(),
+                      child: Text(l10n.continueFacebook),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
+          ] else if (state.providers.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            BrainCard(
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.verified_user,
+                    color: BrainColors.textSecondary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      l10n.connectedWith(state.providers.join(', ')),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

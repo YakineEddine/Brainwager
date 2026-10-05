@@ -1,10 +1,12 @@
 // Gate onboarding au niveau app : entoure le contenu du router.
+// Fail-closed : avant la première détermination (loading initial du
+// contrôleur), SEUL un état compact est rendu. Jamais de Home/navbar/
+// écran de jeu en flash. La localisation router sous-jacente est
+// préservée : l'enfant exact est réaffiché à l'ouverture.
 // - chargement profil => état compact
 // - session + onboarding_complete=false => OnboardingScreen plein écran
-//   (SANS navbar, la localisation router sous-jacente est préservée)
+//   (SANS navbar)
 // - onboarding_complete=true (ou erreur sans profil => retry) => enfant.
-// Ne détruit jamais la localisation go_router : l'enfant reste monté dans
-// l'arbre dès que la gate s'ouvre.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -38,7 +40,10 @@ class _OnboardingGateState extends ConsumerState<OnboardingGate> {
     final l10n = AppLocalizations.of(context)!;
     final state = ref.watch(profileControllerProvider);
     final controller = ref.read(profileControllerProvider.notifier);
-    if (state.profileLoading && state.profile == null) {
+    // Fail-closed : profil indéterminé (ni chargé, ni erreur, que le
+    // contrôleur charge ou soit encore oisif) => compact uniquement.
+    // Le premier frame ne montre jamais l'enfant (pas de flash Home).
+    if (state.profile == null && state.profileError == null) {
       return const BrainScaffold(body: BrainLoading());
     }
     final profile = state.profile;

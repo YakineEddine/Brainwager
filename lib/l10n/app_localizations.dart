@@ -1053,6 +1053,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry'**
   String get retry;
+
+  /// No description provided for @avatarBrain.
+  ///
+  /// In en, this message translates to:
+  /// **'Brain'**
+  String get avatarBrain;
+
+  /// No description provided for @avatarRocket.
+  ///
+  /// In en, this message translates to:
+  /// **'Rocket'**
+  String get avatarRocket;
+
+  /// No description provided for @avatarStar.
+  ///
+  /// In en, this message translates to:
+  /// **'Star'**
+  String get avatarStar;
+
+  /// No description provided for @avatarLightning.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning'**
+  String get avatarLightning;
+
+  /// No description provided for @avatarPlanet.
+  ///
+  /// In en, this message translates to:
+  /// **'Planet'**
+  String get avatarPlanet;
+
+  /// No description provided for @avatarTrophy.
+  ///
+  /// In en, this message translates to:
+  /// **'Trophy'**
+  String get avatarTrophy;
+
+  /// No description provided for @avatarFootball.
+  ///
+  /// In en, this message translates to:
+  /// **'Football'**
+  String get avatarFootball;
+
+  /// No description provided for @avatarBasketball.
+  ///
+  /// In en, this message translates to:
+  /// **'Basketball'**
+  String get avatarBasketball;
 }
 
 class _AppLocalizationsDelegate

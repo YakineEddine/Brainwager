@@ -158,5 +158,13 @@
   "accountConnected": "حساب متصل",
   "editProfile": "تعديل الملف الشخصي",
   "connectedWith": "متصل عبر {provider}",
-  "retry": "إعادة المحاولة"
+  "retry": "إعادة المحاولة",
+  "avatarBrain": "العقل",
+  "avatarRocket": "الصاروخ",
+  "avatarStar": "النجمة",
+  "avatarLightning": "البرق",
+  "avatarPlanet": "الكوكب",
+  "avatarTrophy": "الكأس",
+  "avatarFootball": "كرة القدم",
+  "avatarBasketball": "كرة السلة"
 }

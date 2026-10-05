@@ -93,3 +93,26 @@ Aucun secret OAuth dans Flutter, aucun `google_sign_in` /
 - Autoriser `brainwager://auth-callback` dans les redirect URLs.
 - Activer le liaising manuel d'identités (linking) côté Supabase.
 - Tester sur appareil avec providers configurés (pas de faux succès).
+
+## 11. Durcissement revue (même ticket, second commit)
+
+- Sélection avatar immédiate : `BrainAvatarChooser(selectedKey)` local
+  prime sur le flag serveur (aucune mutation des modèles, aucun RPC pour
+  le déplacement visuel) ; affichage profil résolu par
+  `profile.avatarKey` d'abord (`resolveVisibleAvatar`).
+- Recharges sérialisées par génération : un vol à la fois, event =>
+  invalidation + un seul suivi, résultats périmés jetés (UID capturé au
+  départ, installation seulement si génération courante et même user).
+  Changement de compte => fail-closed immédiat (profil/avatars/providers/
+  erreurs effacés, gate fermée). Link (UUID identique) => simple refresh.
+- Events typés (`AuthEventKind`) : reload pour signedIn/userUpdated/
+  signedOut/other ; `tokenRefreshed`/`initialSession` ignorés.
+- Gate fail-closed : `profile == null && error == null` => compact,
+  jamais l'enfant au premier frame (pas de flash Home/navbar).
+- Account-aware : `ProfileUiState.isAnonymous` (gateway, jamais supa()
+  direct en build) ; lié => CTA "Save profile", contrôles guest-only
+  masqués, statut connecté affiché.
+- Sémantique avatar localisée (`avatarBrain…avatarBasketball` FR/EN/AR,
+  repli générique, jamais la clé brute).
+- Erreurs séparées : `profile-load-error` → `profileLoadError`,
+  `profile-save-error` → `profileSaveError` (inconnus classés par chemin).

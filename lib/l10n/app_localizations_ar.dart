@@ -500,4 +500,28 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get retry => 'إعادة المحاولة';
+
+  @override
+  String get avatarBrain => 'العقل';
+
+  @override
+  String get avatarRocket => 'الصاروخ';
+
+  @override
+  String get avatarStar => 'النجمة';
+
+  @override
+  String get avatarLightning => 'البرق';
+
+  @override
+  String get avatarPlanet => 'الكوكب';
+
+  @override
+  String get avatarTrophy => 'الكأس';
+
+  @override
+  String get avatarFootball => 'كرة القدم';
+
+  @override
+  String get avatarBasketball => 'كرة السلة';
 }

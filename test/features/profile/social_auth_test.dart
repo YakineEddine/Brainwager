@@ -33,6 +33,8 @@ class FakeAuth implements SocialAuthGateway {
 
   void emitAuthEvent() => _events.add(const AuthEvent());
 
+  void emit(AuthEvent event) => _events.add(event);
+
   @override
   String? get currentUserId => userId;
 

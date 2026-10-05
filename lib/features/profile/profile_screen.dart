@@ -1,13 +1,13 @@
 // Profil : données serveur 0014 (get_my_profile / list_my_avatars).
-// Anonyme => "Sécuriser" (linkIdentity, UUID préservé).
+// Anonyme (état contrôleur) => "Sécuriser" (linkIdentity, UUID préservé).
 // Non-anonyme => identités connectées (getUserIdentities, sans tokens).
-// Édition : pseudo + avatars débloqués, save via update_my_profile.
+// Édition : pseudo + avatars débloqués, save via update_my_profile,
+// sélection visuelle immédiate (selectedKey local).
 // Ni suppression, ni unlink, ni sign-out dans ce ticket.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
-import '../../core/network/supabase_client.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/brain_buttons.dart';
 import '../../shared/widgets/brain_card.dart';
@@ -16,6 +16,7 @@ import '../../shared/widgets/brand.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/state_views.dart';
 import 'avatar_view.dart';
+import 'profile.dart';
 import 'profile_controller.dart';
 import 'profile_errors.dart';
 
@@ -24,6 +25,38 @@ import 'profile_errors.dart';
 String? localDisplayName(Map<String, dynamic>? metadata) {
   final raw = metadata?['display_name'];
   if (raw is String && raw.trim().isNotEmpty) return raw.trim();
+  return null;
+}
+
+/// Avatar visible : clé du profil d'abord (jamais un flag serveur périmé),
+/// repli sur le flag serveur, sinon aucun (icône générique).
+BrainAvatarView? resolveVisibleAvatar(
+  List<BrainAvatar> avatars,
+  String profileAvatarKey, {
+  required String Function(String avatarKey) labelFor,
+  double size = 64,
+}) {
+  for (final a in avatars) {
+    if (a.avatarKey == profileAvatarKey) {
+      return BrainAvatarView(
+        key: ValueKey('avatar-${a.avatarKey}'),
+        avatar: a,
+        selected: true,
+        semanticLabel: labelFor(a.avatarKey),
+        size: size,
+      );
+    }
+  }
+  for (final a in avatars) {
+    if (a.selected) {
+      return BrainAvatarView(
+        key: ValueKey('avatar-${a.avatarKey}'),
+        avatar: a,
+        semanticLabel: labelFor(a.avatarKey),
+        size: size,
+      );
+    }
+  }
   return null;
 }
 
@@ -55,10 +88,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final controller = ref.read(profileControllerProvider.notifier);
     final profile = state.profile;
 
-    bool anonymous = true;
-    try {
-      anonymous = supa().auth.currentUser?.isAnonymous ?? true;
-    } catch (_) {}
+    // État compte autoritaire (contrôleur) : jamais supa() direct ici.
+    final anonymous = state.isAnonymous;
 
     if (profile == null) {
       return BrainScaffold(
@@ -81,8 +112,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _name.text = profile.displayName;
       }
     }
-    final avatar = state.avatars.where((a) => a.selected).toList();
-    final currentAvatar = avatar.isNotEmpty ? avatar.first : null;
+    final visibleAvatar = resolveVisibleAvatar(
+      state.avatars,
+      profile.avatarKey,
+      labelFor: (k) => avatarNameFor(k, l10n),
+    );
 
     return BrainScaffold(
       appBar: AppBar(title: Text(l10n.profileTitle)),
@@ -96,8 +130,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           BrainCard(
             child: Row(
               children: [
-                if (currentAvatar != null)
-                  BrainAvatarView(avatar: currentAvatar, size: 64)
+                if (visibleAvatar != null)
+                  visibleAvatar
                 else
                   Container(
                     width: 64,
@@ -254,6 +288,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   SectionHeader(title: l10n.chooseAvatar),
                   BrainAvatarChooser(
                     avatars: state.avatars,
+                    selectedKey: _avatarKey ?? profile.avatarKey,
+                    semanticLabelFor: (k) => avatarNameFor(k, l10n),
                     onSelect: (key) => setState(() => _avatarKey = key),
                   ),
                   const SizedBox(height: 12),

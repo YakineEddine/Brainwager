@@ -500,4 +500,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retry => 'Retry';
+
+  @override
+  String get avatarBrain => 'Brain';
+
+  @override
+  String get avatarRocket => 'Rocket';
+
+  @override
+  String get avatarStar => 'Star';
+
+  @override
+  String get avatarLightning => 'Lightning';
+
+  @override
+  String get avatarPlanet => 'Planet';
+
+  @override
+  String get avatarTrophy => 'Trophy';
+
+  @override
+  String get avatarFootball => 'Football';
+
+  @override
+  String get avatarBasketball => 'Basketball';
 }

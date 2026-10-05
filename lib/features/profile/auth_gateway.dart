@@ -7,10 +7,31 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/network/supabase_client.dart';
 import 'profile.dart';
 
-/// Event auth minimal (neutre SDK, testable) : tout changement de session
-/// ou d'identité déclenche une recharge autoritative côté contrôleur.
+/// Nature d'un changement auth. Seuls les changements d'identité/session
+/// (sign-in, mise à jour user, sign-out) justifient une recharge profil.
+/// Les rafraîchissements de token de routine sont ignorés.
+/// L'initiale est déjà couverte par ensureStarted().
+enum AuthEventKind {
+  signedIn,
+  userUpdated,
+  signedOut,
+  tokenRefreshed,
+  initialSession,
+  other,
+}
+
+/// Event auth minimal (neutre SDK, testable). Par défaut signé pertinent
+/// (compat : `const AuthEvent()` == signedIn).
 class AuthEvent {
-  const AuthEvent();
+  final AuthEventKind kind;
+  const AuthEvent([this.kind = AuthEventKind.signedIn]);
+
+  /// Vrai si le contrôleur doit recharger le profil autoritaire.
+  bool get shouldReload =>
+      kind == AuthEventKind.signedIn ||
+      kind == AuthEventKind.userUpdated ||
+      kind == AuthEventKind.signedOut ||
+      kind == AuthEventKind.other;
 }
 
 /// Opérations auth nécessaires au profil/onboarding (interface fine).
@@ -24,6 +45,23 @@ abstract interface class SocialAuthGateway {
   Future<bool> signInGoogle();
   Future<bool> signInFacebook();
   Future<List<String>> connectedProviders();
+}
+
+AuthEventKind _kindOf(AuthChangeEvent event) {
+  switch (event) {
+    case AuthChangeEvent.signedIn:
+      return AuthEventKind.signedIn;
+    case AuthChangeEvent.userUpdated:
+      return AuthEventKind.userUpdated;
+    case AuthChangeEvent.signedOut:
+      return AuthEventKind.signedOut;
+    case AuthChangeEvent.tokenRefreshed:
+      return AuthEventKind.tokenRefreshed;
+    case AuthChangeEvent.initialSession:
+      return AuthEventKind.initialSession;
+    default:
+      return AuthEventKind.other;
+  }
 }
 
 class SupabaseSocialAuthGateway implements SocialAuthGateway {
@@ -51,7 +89,9 @@ class SupabaseSocialAuthGateway implements SocialAuthGateway {
   @override
   Stream<AuthEvent> get authStateChanges {
     try {
-      return _client().auth.onAuthStateChange.map((_) => const AuthEvent());
+      return _client().auth.onAuthStateChange.map(
+        (s) => AuthEvent(_kindOf(s.event)),
+      );
     } catch (_) {
       return const Stream.empty();
     }

@@ -503,4 +503,28 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get retry => 'Réessayer';
+
+  @override
+  String get avatarBrain => 'Cerveau';
+
+  @override
+  String get avatarRocket => 'Fusée';
+
+  @override
+  String get avatarStar => 'Étoile';
+
+  @override
+  String get avatarLightning => 'Éclair';
+
+  @override
+  String get avatarPlanet => 'Planète';
+
+  @override
+  String get avatarTrophy => 'Trophée';
+
+  @override
+  String get avatarFootball => 'Football';
+
+  @override
+  String get avatarBasketball => 'Basket-ball';
 }
