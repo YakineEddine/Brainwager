@@ -11,6 +11,7 @@ import 'package:brainwager/app/router.dart';
 import 'package:brainwager/app/theme.dart';
 import 'package:brainwager/core/navigation/deep_link_service.dart';
 import 'package:brainwager/core/network/supabase_client.dart';
+import 'package:brainwager/features/profile/onboarding_gate.dart';
 import 'package:brainwager/l10n/app_localizations.dart';
 
 /// Instance deep links retenue pour toute la vie de l'app (un seul
@@ -79,6 +80,8 @@ class BrainwagerApp extends StatelessWidget {
       locale: locale,
       theme: buildBrainTheme(),
       routerConfig: brainRouter,
+      builder: (context, child) =>
+          OnboardingGate(child: child ?? const SizedBox.shrink()),
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,

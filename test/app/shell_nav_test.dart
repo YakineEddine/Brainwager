@@ -9,6 +9,8 @@ import 'package:brainwager/app/router.dart';
 import 'package:brainwager/app/theme.dart';
 import 'package:brainwager/features/packs/pack.dart';
 import 'package:brainwager/features/packs/pack_providers.dart';
+import 'package:brainwager/features/profile/profile.dart';
+import 'package:brainwager/features/profile/profile_controller.dart';
 import 'package:brainwager/features/profile/profile_screen.dart';
 import 'package:brainwager/features/shop/billing_controller.dart';
 import 'package:brainwager/features/shop/billing_models.dart';
@@ -353,6 +355,13 @@ void main() {
     Future<String?> iconLabel(Locale locale) async {
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            // Profil serveur simulé (0014) : la carte avatar s'affiche
+            // sans Supabase, avec l'icône de repli sémantisée.
+            profileControllerProvider.overrideWith(
+              _SeededProfileController.new,
+            ),
+          ],
           child: MaterialApp(
             locale: locale,
             localizationsDelegates: const [
@@ -374,4 +383,21 @@ void main() {
     expect(await iconLabel(const Locale('ar')), 'الصورة الرمزية');
     expect(await iconLabel(const Locale('en')), 'Avatar');
   });
+}
+
+/// Contrôleur profil pré-chargé (tests UI) : aucun RPC/Supabase.
+/// Même carte avatar que la prod (repli localisé si aucun avatar).
+class _SeededProfileController extends ProfileController {
+  @override
+  ProfileUiState build() {
+    return const ProfileUiState(
+      profile: BrainProfile(
+        id: 'test-user',
+        displayName: 'Test',
+        locale: 'fr',
+        avatarKey: 'brain',
+        onboardingComplete: true,
+      ),
+    );
+  }
 }

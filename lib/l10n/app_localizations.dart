@@ -921,6 +921,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Avatar'**
   String get profileAvatar;
+
+  /// No description provided for @welcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Brainwager'**
+  String get welcome;
+
+  /// No description provided for @chooseAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your avatar'**
+  String get chooseAvatar;
+
+  /// No description provided for @displayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name'**
+  String get displayName;
+
+  /// No description provided for @saveProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Save profile'**
+  String get saveProfile;
+
+  /// No description provided for @continueGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue as guest'**
+  String get continueGuest;
+
+  /// No description provided for @continueGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get continueGoogle;
+
+  /// No description provided for @continueFacebook.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Facebook'**
+  String get continueFacebook;
+
+  /// No description provided for @secureAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure my account'**
+  String get secureAccount;
+
+  /// No description provided for @secureAccountExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Link Google or Facebook to keep this guest\'s progress on any device.'**
+  String get secureAccountExplanation;
+
+  /// No description provided for @alreadyHaveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account?'**
+  String get alreadyHaveAccount;
+
+  /// No description provided for @existingAccountWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This opens your existing account instead of this temporary guest.'**
+  String get existingAccountWarning;
+
+  /// No description provided for @oauthPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the browser…'**
+  String get oauthPending;
+
+  /// No description provided for @oauthUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in unavailable right now. Your guest session is kept.'**
+  String get oauthUnavailable;
+
+  /// No description provided for @profileLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load profile'**
+  String get profileLoadError;
+
+  /// No description provided for @profileSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save profile'**
+  String get profileSaveError;
+
+  /// No description provided for @invalidDisplayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name must be 2–20 characters.'**
+  String get invalidDisplayName;
+
+  /// No description provided for @avatarLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'This avatar is locked.'**
+  String get avatarLocked;
+
+  /// No description provided for @accountGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest account'**
+  String get accountGuest;
+
+  /// No description provided for @accountConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected account'**
+  String get accountConnected;
+
+  /// No description provided for @editProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit profile'**
+  String get editProfile;
+
+  /// No description provided for @connectedWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected with {provider}'**
+  String connectedWith(Object provider);
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
 }
 
 class _AppLocalizationsDelegate

@@ -432,4 +432,75 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileAvatar => 'Avatar';
+
+  @override
+  String get welcome => 'Bienvenue sur Brainwager';
+
+  @override
+  String get chooseAvatar => 'Choisis ton avatar';
+
+  @override
+  String get displayName => 'Pseudo affiché';
+
+  @override
+  String get saveProfile => 'Enregistrer le profil';
+
+  @override
+  String get continueGuest => 'Continuer en invité';
+
+  @override
+  String get continueGoogle => 'Continuer avec Google';
+
+  @override
+  String get continueFacebook => 'Continuer avec Facebook';
+
+  @override
+  String get secureAccount => 'Sécuriser mon compte';
+
+  @override
+  String get secureAccountExplanation =>
+      'Lie Google ou Facebook pour garder la progression de cet invité sur tous tes appareils.';
+
+  @override
+  String get alreadyHaveAccount => 'Déjà un compte ?';
+
+  @override
+  String get existingAccountWarning =>
+      'Cela ouvre ton compte existant au lieu de cet invité temporaire.';
+
+  @override
+  String get oauthPending => 'En attente du navigateur…';
+
+  @override
+  String get oauthUnavailable =>
+      'Connexion indisponible pour l’instant. Ta session invité est conservée.';
+
+  @override
+  String get profileLoadError => 'Profil introuvable';
+
+  @override
+  String get profileSaveError => 'Enregistrement impossible';
+
+  @override
+  String get invalidDisplayName => 'Le pseudo doit faire 2 à 20 caractères.';
+
+  @override
+  String get avatarLocked => 'Cet avatar est verrouillé.';
+
+  @override
+  String get accountGuest => 'Compte invité';
+
+  @override
+  String get accountConnected => 'Compte connecté';
+
+  @override
+  String get editProfile => 'Modifier le profil';
+
+  @override
+  String connectedWith(Object provider) {
+    return 'Connecté avec $provider';
+  }
+
+  @override
+  String get retry => 'Réessayer';
 }

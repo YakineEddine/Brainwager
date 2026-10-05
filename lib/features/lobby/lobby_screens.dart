@@ -17,6 +17,8 @@ import '../packs/pack_providers.dart';
 import '../packs/pack_repository.dart';
 import '../packs/pack_selection.dart';
 import '../packs/shared_pack.dart';
+import '../profile/profile.dart';
+import '../profile/profile_controller.dart';
 import 'lobby_viewmodel.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -123,6 +125,7 @@ class CreateScreen extends ConsumerStatefulWidget {
 class _CreateScreenState extends ConsumerState<CreateScreen> {
   final _pseudo = TextEditingController();
   String? _gameLang;
+  bool _prefilledNickname = false;
   Future<({SharedPack pack, Set<String> entitlements})>? _sharedFuture;
 
   @override
@@ -168,6 +171,25 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final appLang = Localizations.localeOf(context).languageCode;
+    // Pré-remplissage unique depuis le profil serveur : seulement si le
+    // champ est vide, jamais par-dessus la frappe (le joueur peut changer).
+    final serverName = ref.watch(
+      profileControllerProvider.select((s) => s.profile?.displayName),
+    );
+    if (!_prefilledNickname) {
+      if (_pseudo.text.isNotEmpty) {
+        _prefilledNickname = true;
+      } else if (serverName != null) {
+        _prefilledNickname = true;
+        if (isDisplayNameValid(serverName)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _pseudo.text.isEmpty) {
+              _pseudo.text = serverName;
+            }
+          });
+        }
+      }
+    }
     // Langue du CONTENU (sélecteur, indépendante de l'UI) vs langue UI
     // (messages d'erreur uniquement) : UI FR + partie AR reste AR.
     final gameLanguage = _gameLang ?? defaultGameLanguage(appLang);
@@ -440,6 +462,7 @@ class JoinScreen extends ConsumerStatefulWidget {
 class _JoinScreenState extends ConsumerState<JoinScreen> {
   final _code = TextEditingController();
   final _pseudo = TextEditingController();
+  bool _prefilledNickname = false;
 
   @override
   void initState() {
@@ -462,6 +485,24 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
     final lobby = ref.watch(lobbyViewModelProvider);
     final l10n = AppLocalizations.of(context)!;
     final lang = Localizations.localeOf(context).languageCode;
+    // Pré-remplissage unique depuis le profil serveur (jamais d'écrasement).
+    final serverName = ref.watch(
+      profileControllerProvider.select((s) => s.profile?.displayName),
+    );
+    if (!_prefilledNickname) {
+      if (_pseudo.text.isNotEmpty) {
+        _prefilledNickname = true;
+      } else if (serverName != null) {
+        _prefilledNickname = true;
+        if (isDisplayNameValid(serverName)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _pseudo.text.isEmpty) {
+              _pseudo.text = serverName;
+            }
+          });
+        }
+      }
+    }
     return BrainScaffold(
       appBar: AppBar(title: Text(l10n.joinGame)),
       body: ListView(

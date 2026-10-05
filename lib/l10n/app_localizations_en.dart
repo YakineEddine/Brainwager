@@ -429,4 +429,75 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileAvatar => 'Avatar';
+
+  @override
+  String get welcome => 'Welcome to Brainwager';
+
+  @override
+  String get chooseAvatar => 'Choose your avatar';
+
+  @override
+  String get displayName => 'Display name';
+
+  @override
+  String get saveProfile => 'Save profile';
+
+  @override
+  String get continueGuest => 'Continue as guest';
+
+  @override
+  String get continueGoogle => 'Continue with Google';
+
+  @override
+  String get continueFacebook => 'Continue with Facebook';
+
+  @override
+  String get secureAccount => 'Secure my account';
+
+  @override
+  String get secureAccountExplanation =>
+      'Link Google or Facebook to keep this guest\'s progress on any device.';
+
+  @override
+  String get alreadyHaveAccount => 'Already have an account?';
+
+  @override
+  String get existingAccountWarning =>
+      'This opens your existing account instead of this temporary guest.';
+
+  @override
+  String get oauthPending => 'Waiting for the browser…';
+
+  @override
+  String get oauthUnavailable =>
+      'Sign-in unavailable right now. Your guest session is kept.';
+
+  @override
+  String get profileLoadError => 'Could not load profile';
+
+  @override
+  String get profileSaveError => 'Could not save profile';
+
+  @override
+  String get invalidDisplayName => 'Display name must be 2–20 characters.';
+
+  @override
+  String get avatarLocked => 'This avatar is locked.';
+
+  @override
+  String get accountGuest => 'Guest account';
+
+  @override
+  String get accountConnected => 'Connected account';
+
+  @override
+  String get editProfile => 'Edit profile';
+
+  @override
+  String connectedWith(Object provider) {
+    return 'Connected with $provider';
+  }
+
+  @override
+  String get retry => 'Retry';
 }

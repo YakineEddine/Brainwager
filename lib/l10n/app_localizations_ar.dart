@@ -429,4 +429,75 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get profileAvatar => 'الصورة الرمزية';
+
+  @override
+  String get welcome => 'مرحبًا بك في Brainwager';
+
+  @override
+  String get chooseAvatar => 'اختر صورتك الرمزية';
+
+  @override
+  String get displayName => 'الاسم المعروض';
+
+  @override
+  String get saveProfile => 'حفظ الملف الشخصي';
+
+  @override
+  String get continueGuest => 'المتابعة كضيف';
+
+  @override
+  String get continueGoogle => 'المتابعة عبر Google';
+
+  @override
+  String get continueFacebook => 'المتابعة عبر Facebook';
+
+  @override
+  String get secureAccount => 'تأمين حسابي';
+
+  @override
+  String get secureAccountExplanation =>
+      'اربط Google أو Facebook للاحتفاظ بتقدم هذا الضيف على جميع أجهزتك.';
+
+  @override
+  String get alreadyHaveAccount => 'لديك حساب بالفعل؟';
+
+  @override
+  String get existingAccountWarning =>
+      'سيؤدي هذا إلى فتح حسابك الحالي بدل هذا الضيف المؤقت.';
+
+  @override
+  String get oauthPending => 'في انتظار المتصفح…';
+
+  @override
+  String get oauthUnavailable =>
+      'تسجيل الدخول غير متاح حاليًا. تم الاحتفاظ بجلسة الضيف.';
+
+  @override
+  String get profileLoadError => 'تعذر تحميل الملف الشخصي';
+
+  @override
+  String get profileSaveError => 'تعذر حفظ الملف الشخصي';
+
+  @override
+  String get invalidDisplayName => 'يجب أن يكون الاسم من 2 إلى 20 حرفًا.';
+
+  @override
+  String get avatarLocked => 'هذه الصورة مقفلة.';
+
+  @override
+  String get accountGuest => 'حساب ضيف';
+
+  @override
+  String get accountConnected => 'حساب متصل';
+
+  @override
+  String get editProfile => 'تعديل الملف الشخصي';
+
+  @override
+  String connectedWith(Object provider) {
+    return 'متصل عبر $provider';
+  }
+
+  @override
+  String get retry => 'إعادة المحاولة';
 }
