@@ -1,3 +1,4 @@
+
 -- Brainwager 0014 — social profile + avatar foundation.
 -- Additive profile/onboarding model. OAuth identities stay in Supabase Auth;
 -- anonymous -> OAuth linking preserves auth.users.id.
